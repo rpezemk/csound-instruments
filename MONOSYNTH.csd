@@ -2,8 +2,6 @@
 <CsOptions>
 -+rtmidi=portmidi -Ma -odac -b 256 -B1024
 ;-iadc    ;;;uncomment -iadc if realtime audio input is needed too
-; For Non-realtime ouput leave only the line below:
-; -o mxadsr.wav -W ;;; for file output any platform
 </CsOptions>
 <CsInstruments>
 
@@ -32,8 +30,6 @@ nchnls = 1
         endif
         kThisTrig = 0
     endin
-
-    ;################### SUPPORTING INSTR ####################
 
     ;################# MONO PLAYER ###################
     instr 19
@@ -108,7 +104,6 @@ nchnls = 1
                 kAttTrig = 1
             endif
             if giRetriggerAtt == 1 || (kState == 0 || kState == 1) then
-                printks "ATTACK RETRIGGER \n", 0
                 kAttTrig = 1
             endif
         endif
@@ -139,14 +134,12 @@ nchnls = 1
         if kAttTrig == 1  then
             kAttSnap = kTime
             kState = 1
-            printks "ATT\n", 0
         endif
 
         if kState == 1 && kAttTimer >= iAtt then
             kDecTrig = 1
             kDecSnap = kTime
             kState = 2
-            printks "DEC\n", 0
         endif
 
         if kState == 2 && kAttTimer > iAtt + iDec then
