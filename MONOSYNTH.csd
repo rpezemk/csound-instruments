@@ -54,9 +54,9 @@ nchnls = 1
         iTriangle = 3
         ; ;kloop lpshold 3, 0, 0, 0, 2, 12, 2, 24, 2
         kCV = gknum+kbend
-        asig1 vco 0.3, cpsmidinn(kCV),           iSquare,     0.5
-        asig2 vco 0.4, cpsmidinn(kCV+12.11),     iPulse,      0.3
-        asig3 vco 1,   cpsmidinn(kCV-12.05),     iPulse,      0.6
+        asig1 vco 0.3, cpsmidinn(kCV),          iSquare,     0.5
+        asig2 vco 0.4, cpsmidinn(kCV+0.03),     iPulse,      0.3
+        asig3 vco 1,   cpsmidinn(kCV-0.04),     iPulse,      0.6
 
         kEnv chnget "ENV_1"
         kfEnv chnget "ENV_1"
@@ -71,6 +71,12 @@ nchnls = 1
 
     ;############## ENVELOPE INSTR ##############
     instr 21 
+        iAtt init  p4 ;A
+        iDec init  p5 ;D
+        iSus init  p6 ;S
+        iRel init  p7 ;R
+        iChan init p8 ;Ch
+        
         kTime times
         kSavedEnv init 0
         kEnv init 0
@@ -78,11 +84,6 @@ nchnls = 1
         kDecTimer init 0
         kRelTimer init 0
         kIsRel init 0
-        iAtt init  p4 ;A
-        iDec init  p5 ;D
-        iSus init  p6 ;S
-        iRel init  p7 ;R
-        iChan init p8 ;Ch
 
         kAttSnap init 0
         kDecSnap init 0
