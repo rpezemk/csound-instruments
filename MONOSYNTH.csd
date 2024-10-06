@@ -76,7 +76,7 @@ nchnls = 1
         iSus init  p6 ;S
         iRel init  p7 ;R
         iChan init p8 ;Ch
-        
+
         kTime times
         kSavedEnv init 0
         kEnv init 0
@@ -112,7 +112,6 @@ nchnls = 1
         if gkPrevPressed > gkAnyPressed then
             kRelTrig = 1
         endif
-
 
         if kState == 1 || kState == 2 then
             kAttTimer = kTime - kAttSnap
@@ -193,10 +192,10 @@ nchnls = 1
     f 2 0 4096 10 1	
     f0 30000
 
-    ; EVENTS
-    ;         
+    ;OSCILLATOR INSTR
+    i19 0      7200
       
-    i19 0      7200  
+    ;ENVELOPE INSTR
     ;----------------p4   p5  p6    p7-  p8
     ;----------------A    D   S     R--- CHAN
     i21 0.01   7200  0.1  2   0.5   4    1
