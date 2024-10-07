@@ -1,6 +1,6 @@
 <CsoundSynthesizer>
 <CsOptions>
--+rtmidi=portmidi -Ma -odac -b 256 -B1024
+-+rtmidi=portmidi -Ma -odac -b 512 -B1024
 ;-iadc    ;;;uncomment -iadc if realtime audio input is needed too
 </CsOptions>
 <CsInstruments>
@@ -10,181 +10,198 @@ ksmps = 441
 nchnls = 1
 0dbfs  = 1
 
+#define Square #1#
+#define Pulse  #2#
+#define Triangle  #3#
+
     gknum init 20
-    gkNoteOnTrigger init 0
     giRetriggerAtt init 0
-    gkAnyPressed init 0
     gkPrevPressed init 0
     gkInstr2Playing init 0
     gkInstr2Count init 0
-    ;################ MIDI DETECTOR #################
-    instr 1	 
-        inum    notnum
-        gknum = inum
-        iamp ampmidi 1
-        print iamp
-        gkAnyPressed = 1
-        kThisTrig init 1
-        if kThisTrig == 1 then 
-            gkNoteOnTrigger = 1
-        endif
-        kThisTrig = 0
-    endin
 
-    ;################# MONO PLAYER ###################
-    instr 19
-        kTime times
-        kAttTrig init 0
-        kDecTrig init 0
-        kRelTrig init 0
-        gkNoteOnTrigger init 0
-
-        gkAnyPressed init 0
-        gkPrevPressed init 0
-        kOnTrig init 0
-        kOffTrig init 0
-        
+    instr 39 ; ##### ROUTING INSTR ################
+        kPitch chnget "MIDI_NOTE_01"
         kstatus, kchan, kdata1, kdata2 midiin;
         if(kstatus==224) then
             kbend= 2*(kdata2/64 - 1)
         endif
-
-        iSquare = 1
-        iPulse = 2
-        iTriangle = 3
-        ; ;kloop lpshold 3, 0, 0, 0, 2, 12, 2, 24, 2
-        kCV = gknum+kbend
-        asig1 vco 0.3, cpsmidinn(kCV),          iSquare,     0.5
-        asig2 vco 0.4, cpsmidinn(kCV+0.03),     iPulse,      0.3
-        asig3 vco 1,   cpsmidinn(kCV-0.04),     iPulse,      0.6
-
+        kPitch = kPitch + kbend
+        chnset kPitch, "GEN_NOTE_1"
+        chnset kPitch - 12 , "GEN_NOTE_2"
+        chnset kPitch + 7 , "GEN_NOTE_3"
+        asig chnget "GEN_OUTPUT_1"
+        asig2 chnget "GEN_OUTPUT_2"
+        asig3 chnget "GEN_OUTPUT_3"
+        chnset k(0.7), "FILTER_RES_1"
+        chnset kPitch + 10, "FILTER_FREQ_1"
         kEnv chnget "ENV_1"
-        kfEnv chnget "ENV_1"
-
-        asig = 1/3*(asig1+asig2+asig3)
-        asig clip asig, 1, 1
-        asig = asig*kEnv
-        kmoogF min 130, gknum+kbend+kfEnv*30
-        asig moogvcf asig, cpsmidinn(kmoogF), 0.7
-        outs 0.02*asig
+        asum = (asig + asig2 + asig3) * kEnv
+        chnset asum, "FILTER_INPUT_1"
+        asig chnget "FILTER_OUT_1"
+        outs 0.01*asig
     endin
 
-    ;############## ENVELOPE INSTR ##############
-    instr 21 
-        iAtt init  p4 ;A
-        iDec init  p5 ;D
-        iSus init  p6 ;S
-        iRel init  p7 ;R
-        iChan init p8 ;Ch
+    
+    instr 1	;################ MIDI DETECTOR #################
+        inum    notnum
+        gknum = inum
+        chnset gknum, "MIDI_NOTE_01"
+        iamp ampmidi 1
+        print iamp
+        kPressed = 1
+        chnset kPressed, "KEY_PRESSED"
+        kThisTrig init 1
+        kThisTrig = 0
+    endin
+
+    
+    instr 19 ;################# GENERATOR ###################
+        iFilterNo init  p4 ;A
+        SInputName sprintf "%s%d", "GEN_NOTE_", iFilterNo
+        SOutputName sprintf "%s%d", "GEN_OUTPUT_", iFilterNo
+        kCV chnget SInputName
+        kCV = max(kCV, 1)
+        asig vco 0.3, cpsmidinn(kCV),          $Square,     0.5
+        chnset asig, SOutputName
+    endin
+
+    instr 20 ;############## FILTER ################
+        iFilterNo init  p4 ;A
+        SInputName sprintf "%s%d", "FILTER_INPUT_", iFilterNo
+        SOutputName sprintf "%s%d", "FILTER_OUT_", iFilterNo
+
+        SFreqName sprintf "%s%d", "FILTER_FREQ_", iFilterNo
+        SResName sprintf "%s%d", "FILTER_RES_", iFilterNo
+
+        kPitchEnv chnget SFreqName
+        kRes chnget SResName
+
+        kPitchEnv = max(min(120, kPitchEnv), 0)
+        asig chnget SInputName
+        asig moogvcf asig, cpsmidinn(kPitchEnv + 40), kRes
+        asig = asig
+        chnset asig, SOutputName
+    endin 
+
+    instr 21 ;############## ENVELOPE INSTR ##############
+        iAtt_01 init  p4 ;A
+        iDec_01 init  p5 ;D
+        iSus_01 init  p6 ;S
+        iRel_01 init  p7 ;R
+        iChan_01 init p8 ;Ch
 
         kTime times
-        kSavedEnv init 0
-        kEnv init 0
-        kAttTimer init 0
-        kDecTimer init 0
-        kRelTimer init 0
-        kIsRel init 0
+        kSavedEnv_01 init 0
+        kEnv_01 init 0
+        kAttTimer_01 init 0
+        kDecTimer_01 init 0
+        kRelTimer_01 init 0
 
-        kAttSnap init 0
-        kDecSnap init 0
-        kRelSnap init 0
+        kAttSnap_01 init 0
+        kDecSnap_01 init 0
+        kRelSnap_01 init 0
 
-        kAttTrig = 0
-        kDecTrig = 0
-        kSusTrig = 0
-        kRelTrig = 0
+        kStateTrigger_01 = 0 ; 1 -> A, 4 -> R /// ADSR
 
-        kState init 0
-        kPrevState init 0
-        kDecTimeSaved init 0
+        kState_01 init 0
+        kPrevState_01 init 0
+        kDecTimeSaved_01 init 0
 
-        if gkNoteOnTrigger == 1 then
+        kAnyPressed chnget "KEY_PRESSED"
+        
+        kNoteOnTrigger = max(kAnyPressed - gkPrevPressed, 0)
+
+        if kNoteOnTrigger == 1 then
             if giRetriggerAtt == 1 then
-                kAttTrig = 1
-            elseif gkAnyPressed > gkPrevPressed then 
-                kAttTrig = 1
+                kStateTrigger_01 = 1
+            elseif kAnyPressed > gkPrevPressed then 
+                kStateTrigger_01 = 1
             endif
-            if giRetriggerAtt == 1 || (kState == 0 || kState == 1) then
-                kAttTrig = 1
+            if giRetriggerAtt == 1 || (kState_01 == 0 || kState_01 == 1) then
+                kStateTrigger_01 = 1
             endif
         endif
 
-        if gkPrevPressed > gkAnyPressed then
-            kRelTrig = 1
+        if gkPrevPressed > kAnyPressed then
+            kStateTrigger_01 = 4
         endif
 
-        if kState == 1 || kState == 2 then
-            kAttTimer = kTime - kAttSnap
+        if kState_01 == 1 || kState_01 == 2 then
+            kAttTimer_01 = kTime - kAttSnap_01
         else
-            kAttTimer = 0
+            kAttTimer_01 = 0
         endif
 
-        if kState == 2 then 
-            kDecTimer = kTime - kDecSnap
+        if kState_01 == 2 then 
+            kDecTimer_01 = kTime - kDecSnap_01
         else 
-            kDecTimer = 0
+            kDecTimer_01 = 0
         endif
 
-        if kState == 4  then
-            kRelTimer = kTime - kRelSnap
+        if kState_01 == 4  then
+            kRelTimer_01 = kTime - kRelSnap_01
         else
-            kRelTimer = 0
+            kRelTimer_01 = 0
         endif
 
-        if kAttTrig == 1  then
-            kAttSnap = kTime
-            kState = 1
+        if kStateTrigger_01 == 1  then
+            kAttSnap_01 = kTime
+            kState_01 = 1
         endif
 
-        if kState == 1 && kAttTimer >= iAtt then
-            kDecTrig = 1
-            kDecSnap = kTime
-            kState = 2
+        if kState_01 == 1 && kAttTimer_01 >= iAtt_01 then
+            kDecSnap_01 = kTime
+            kState_01 = 2
         endif
 
-        if kState == 2 && kAttTimer > iAtt + iDec then
-            kSusTrig = 1
-            kState = 3
+        if kState_01 == 2 && kAttTimer_01 > iAtt_01 + iDec_01 then
+            kState_01 = 3
         endif
 
-        if kRelTrig == 1 then
-            kRelSnap = kTime
-            kState = 4
+        if kStateTrigger_01 == 4 then
+            kRelSnap_01 = kTime
+            kState_01 = 4
         endif
 
-        if kRelTimer > iRel then
-
-            kState = 0
+        if kRelTimer_01 > iRel_01 then
+            kState_01 = 0
         endif
 
-        if kState == 4 then
-            if kPrevState == 1 || kPrevState == 2 then
-                kSavedEnv = kEnv
-            elseif  kPrevState == 3 then
-                kSavedEnv = iSus
+        if kState_01 == 4 then
+            if kPrevState_01 == 1 || kPrevState_01 == 2 || kPrevState_01 == 3 then
+                kSavedEnv_01 = kEnv_01
             endif
         endif
 
-        if kState == 1 then
-            kEnv = kAttTimer / iAtt
-        elseif kState == 2 then
-            kEnv = iSus +  (1 - iSus) * (iDec - kDecTimer)/iDec 
-        elseif kState == 3 then
-            kEnv = iSus
-        elseif kState == 4 then
-            kRelPhase = (iRel - kRelTimer)/iRel  + (kSavedEnv - 1)
-            kEnv = max(kRelPhase, 0)
+        if kState_01 == 1 then
+            kEnv_01 = kAttTimer_01 / iAtt_01
+        elseif kState_01 == 2 then
+            kEnv_01 = iSus_01 +  (1 - iSus_01) * (iDec_01 - kDecTimer_01)/iDec_01 
+        elseif kState_01 == 3 then
+            kEnv_01 = iSus_01
+        elseif kState_01 == 4 then
+            kRelPhase = (iRel_01 - kRelTimer_01)/iRel_01  + (kSavedEnv_01 - 1)
+            kEnv_01 = max(kRelPhase, 0)
         endif
 
-        SResult sprintf "%s%d", "ENV_", iChan
-        chnset kEnv, SResult
+        SResult_01 sprintf "%s%d", "ENV_", iChan_01
+        chnset kEnv_01, SResult_01
 
-        kPrevState = kState
-        gkPrevPressed = gkAnyPressed
-        gkAnyPressed = 0
-        gkNoteOnTrigger = 0
+        kPrevState_01 = kState_01
+        gkPrevPressed = kAnyPressed
+        kAnyPressed = 0
+        kNoteOnTrigger = 0
+
     endin
 
+    instr 1000 ; REMOVE KEYPRESS 
+        kPress chnget "KEY_PRESSED"
+        ;printks "kAnyPressed %f\n", 0, kPress
+        kPress = 0
+        chnset kPress, "KEY_PRESSED"
+    endin
+        
 </CsInstruments>
 <CsScore>
     ; TABLES
@@ -192,13 +209,23 @@ nchnls = 1
     f 2 0 4096 10 1	
     f0 30000
 
-    ;OSCILLATOR INSTR
-    i19 0      7200
+
+    i20  0.01   7200  1; FILTER 01
+    i20  0.01   7200  2; FILTER 02
+    i39  0.01   7200  
+    i19  0.02   7200  1; GEN 1
+    i19  0.02   7200  2; GEN 2
+    i19  0.02   7200  3; GEN 3
+    i100 0.02   7200
+    i1000 0.00   7200
+    ;FILTER INSTR
+    ;CONTROL INSTR
+
       
     ;ENVELOPE INSTR
     ;----------------p4   p5  p6    p7-  p8
     ;----------------A    D   S     R--- CHAN
-    i21 0.01   7200  0.1  2   0.5   4    1
+    i21 0.01   7200  0.1  2   0.1   4    1
     ;i21 0.01   7200  1   2   3     4     2
 e
 </CsScore>
