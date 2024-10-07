@@ -1,13 +1,13 @@
 <CsoundSynthesizer>
 <CsOptions>
--+rtmidi=portmidi -Ma -odac -b 512 -B1024
+-+rtmidi=alsa -Ma -odac -b 512 -B1024
 ;-iadc    ;;;uncomment -iadc if realtime audio input is needed too
 </CsOptions>
 <CsInstruments>
 
 sr = 44100
 ksmps = 441
-nchnls = 1
+nchnls = 2; STEREO XD
 0dbfs  = 1
 
 #define Square #1#
@@ -20,6 +20,7 @@ nchnls = 1
     gkInstr2Count init 0
 
     instr 39 ; ##### ROUTING INSTR ################
+        aLFO vco .1, 5,4,0.5
         kPitch chnget "MIDI_NOTE_01"
         kstatus, kchan, kdata1, kdata2 midiin;
         if(kstatus==224) then
@@ -39,10 +40,12 @@ nchnls = 1
         chnset kFEnv-0.2, "FILTER_RES_2"
         kEnv chnget "ENV_1"
         asum = (asig + asig2 + asig3) * kEnv
+        asum2 = (asig*0.7 + asig2*1.5 + asig3) * kEnv
         chnset asum, "FILTER_INPUT_1"
+        chnset asum2, "FILTER_INPUT_2"
         asigLeft chnget "FILTER_OUT_1"
         asigRight chnget "FILTER_OUT_2"
-        outs 0.01*asigLeft, 0.01*asigRight
+        outs 0.08*asigLeft, 0.08*asigRight
     endin
 
     instr 99999 ; ######### MASTER EFFECTS && OUTPUT ##########
