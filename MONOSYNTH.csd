@@ -16,7 +16,6 @@ nchnls = 1
 
     gknum init 20
     giRetriggerAtt init 0
-    gkPrevPressed init 0
     gkInstr2Playing init 0
     gkInstr2Count init 0
 
@@ -33,15 +32,21 @@ nchnls = 1
         asig chnget "GEN_OUTPUT_1"
         asig2 chnget "GEN_OUTPUT_2"
         asig3 chnget "GEN_OUTPUT_3"
-        chnset k(0.7), "FILTER_RES_1"
-        chnset kPitch + 10, "FILTER_FREQ_1"
+        kFEnv chnget "ENV_2"
+        chnset kFEnv*70, "FILTER_FREQ_1"
+        chnset kFEnv*69, "FILTER_FREQ_2"
+        chnset kFEnv-0.3, "FILTER_RES_1"
+        chnset kFEnv-0.2, "FILTER_RES_2"
         kEnv chnget "ENV_1"
         asum = (asig + asig2 + asig3) * kEnv
         chnset asum, "FILTER_INPUT_1"
-        asig chnget "FILTER_OUT_1"
-        outs 0.01*asig
+        asigLeft chnget "FILTER_OUT_1"
+        asigRight chnget "FILTER_OUT_2"
+        outs 0.01*asigLeft, 0.01*asigRight
     endin
 
+    instr 99999 ; ######### MASTER EFFECTS && OUTPUT ##########
+    endin
     
     instr 1	;################ MIDI DETECTOR #################
         inum    notnum
@@ -76,8 +81,7 @@ nchnls = 1
 
         kPitchEnv chnget SFreqName
         kRes chnget SResName
-
-        kPitchEnv = max(min(120, kPitchEnv), 0)
+        kPitchEnv = max(min(50, kPitchEnv), 0)
         asig chnget SInputName
         asig moogvcf asig, cpsmidinn(kPitchEnv + 40), kRes
         asig = asig
@@ -98,6 +102,8 @@ nchnls = 1
         kDecTimer_01 init 0
         kRelTimer_01 init 0
 
+        kPrevPressed init 0
+
         kAttSnap_01 init 0
         kDecSnap_01 init 0
         kRelSnap_01 init 0
@@ -109,13 +115,13 @@ nchnls = 1
         kDecTimeSaved_01 init 0
 
         kAnyPressed chnget "KEY_PRESSED"
-        
-        kNoteOnTrigger = max(kAnyPressed - gkPrevPressed, 0)
+
+        kNoteOnTrigger = max(kAnyPressed - kPrevPressed, 0)
 
         if kNoteOnTrigger == 1 then
             if giRetriggerAtt == 1 then
                 kStateTrigger_01 = 1
-            elseif kAnyPressed > gkPrevPressed then 
+            elseif kAnyPressed > kPrevPressed then 
                 kStateTrigger_01 = 1
             endif
             if giRetriggerAtt == 1 || (kState_01 == 0 || kState_01 == 1) then
@@ -123,7 +129,7 @@ nchnls = 1
             endif
         endif
 
-        if gkPrevPressed > kAnyPressed then
+        if kPrevPressed > kAnyPressed then
             kStateTrigger_01 = 4
         endif
 
@@ -189,7 +195,7 @@ nchnls = 1
         chnset kEnv_01, SResult_01
 
         kPrevState_01 = kState_01
-        gkPrevPressed = kAnyPressed
+        kPrevPressed = kAnyPressed
         kAnyPressed = 0
         kNoteOnTrigger = 0
 
@@ -210,14 +216,15 @@ nchnls = 1
     f0 30000
 
 
-    i20  0.01   7200  1; FILTER 01
-    i20  0.01   7200  2; FILTER 02
-    i39  0.01   7200  
-    i19  0.02   7200  1; GEN 1
-    i19  0.02   7200  2; GEN 2
-    i19  0.02   7200  3; GEN 3
-    i100 0.02   7200
-    i1000 0.00   7200
+    i99999  0.01   7200  1; MASTER
+    i20     0.01   7200  1; FILTER 01
+    i20     0.01   7200  2; FILTER 02
+    i39     0.01   7200  
+    i19     0.02   7200  1; GEN 1
+    i19     0.02   7200  2; GEN 2
+    i19     0.02   7200  3; GEN 3
+    i100    0.02   7200
+    i1000   0.00   7200
     ;FILTER INSTR
     ;CONTROL INSTR
 
@@ -226,6 +233,7 @@ nchnls = 1
     ;----------------p4   p5  p6    p7-  p8
     ;----------------A    D   S     R--- CHAN
     i21 0.01   7200  0.1  2   0.1   4    1
+    i21 0.01   7200  0.1  2   0.1   4    2
     ;i21 0.01   7200  1   2   3     4     2
 e
 </CsScore>
