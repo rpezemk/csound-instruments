@@ -1,6 +1,6 @@
 <CsoundSynthesizer>
 <CsOptions>
--+rtmidi=alsa -Ma -odac -b 512 -B1024
+-+rtmidi=portmidi -Ma -odac -b 512 -B1024
 ;-iadc    ;;;uncomment -iadc if realtime audio input is needed too
 </CsOptions>
 <CsInstruments>
@@ -15,7 +15,7 @@ nchnls = 2; STEREO XD
 #define Triangle  #3#
 
     gknum init 20
-    giRetriggerAtt init 1
+    giRetriggerAtt init 0
     gkInstr2Playing init 0
     gkInstr2Count init 0
 
@@ -25,50 +25,43 @@ nchnls = 2; STEREO XD
         kstatus, kchan, kdata1, kdata2 midiin;
         if(kstatus==224) then
             kbend= 2*(kdata2/64 - 1)
-        endif 
-        kKbdRetrigger chnget "MIDI_RETRIGGER_01"
-
-        chnset kKbdRetrigger, "ENV_RETRIGGER_1"
-        
-
+        endif
         kPitch = kPitch + kbend
-
-        ;######## GENERATOR #########
         chnset kPitch, "GEN_NOTE_1"
         chnset kPitch - 12 , "GEN_NOTE_2"
         chnset kPitch + 7 , "GEN_NOTE_3"
-        
         asig chnget "GEN_OUTPUT_1"
         asig2 chnget "GEN_OUTPUT_2"
         asig3 chnget "GEN_OUTPUT_3"
-
-
-        ;########## FILTER PARAMETERS #############
-        kFEnv chnget "ENV_1"
+        kFEnv chnget "ENV_2"
         chnset kFEnv*70, "FILTER_FREQ_1"
         chnset kFEnv*69, "FILTER_FREQ_2"
         chnset kFEnv-0.3, "FILTER_RES_1"
         chnset kFEnv-0.2, "FILTER_RES_2"
-
-        ;########## AMP/MIX ###########
-        kAmpEnv chnget "ENV_1"
-        asum = (asig + asig2 + asig3) * kAmpEnv
-        asum2 = (asig*0.7 + asig2*1.5 + asig3) * kAmpEnv
-
-        ;######## PASS AUDIO THROUTH FILTERS ###########
+        kEnv chnget "ENV_1"
+        asum = (asig + asig2 + asig3) * kEnv
+        asum2 = (asig*0.7 + asig2*1.5 + asig3) * kEnv
         chnset asum, "FILTER_INPUT_1"
         chnset asum2, "FILTER_INPUT_2"
         asigLeft chnget "FILTER_OUT_1"
         asigRight chnget "FILTER_OUT_2"
-
-        ;######### OUTPUT ###################
         outs 0.08*asigLeft, 0.08*asigRight
     endin
 
     instr 99999 ; ######### MASTER EFFECTS && OUTPUT ##########
     endin
     
-
+    instr 1	;################ MIDI DETECTOR #################
+        inum    notnum
+        gknum = inum
+        chnset gknum, "MIDI_NOTE_01"
+        iamp ampmidi 1
+        print iamp
+        kPressed = 1
+        chnset kPressed, "KEY_PRESSED"
+        kThisTrig init 1
+        kThisTrig = 0
+    endin
 
     
     instr 19 ;################# GENERATOR ###################
@@ -85,7 +78,7 @@ nchnls = 2; STEREO XD
         iFilterNo init  p4 ;A
         SInputName sprintf "%s%d", "FILTER_INPUT_", iFilterNo
         SOutputName sprintf "%s%d", "FILTER_OUT_", iFilterNo
-        
+
         SFreqName sprintf "%s%d", "FILTER_FREQ_", iFilterNo
         SResName sprintf "%s%d", "FILTER_RES_", iFilterNo
 
@@ -97,24 +90,6 @@ nchnls = 2; STEREO XD
         asig = asig
         chnset asig, SOutputName
     endin 
-
-    instr 1	;################ MIDI DETECTOR #################
-        inum    notnum
-        gknum = inum
-
-        kRetrigg init 1
-        chnset kRetrigg, "MIDI_RETRIGGER_01"
-        if kRetrigg == 1 then
-            kRetrigg = 0
-        endif
-
-        chnset gknum, "MIDI_NOTE_01"
-
-        kPressed = 1
-        chnset kPressed, "KEY_PRESSED"
-        kThisTrig init 1
-        kThisTrig = 0
-    endin
 
     instr 21 ;############## ENVELOPE INSTR ##############
         iAtt_01 init  p4 ;A
@@ -130,11 +105,6 @@ nchnls = 2; STEREO XD
         kDecTimer_01 init 0
         kRelTimer_01 init 0
 
-        kAnyPressed chnget "KEY_PRESSED"
-
-        SRetriggerName sprintf "%s%d", "ENV_RETRIGGER_", iChan_01
-        kRetrigg chnget SRetriggerName
-
         kPrevPressed init 0
 
         kAttSnap_01 init 0
@@ -147,21 +117,23 @@ nchnls = 2; STEREO XD
         kPrevState_01 init 0
         kDecTimeSaved_01 init 0
 
+        kAnyPressed chnget "KEY_PRESSED"
 
         kNoteOnTrigger = max(kAnyPressed - kPrevPressed, 0)
 
-        if kAnyPressed > kPrevPressed then
-            kStateTrigger_01 = 1
+        if kNoteOnTrigger == 1 then
+            if giRetriggerAtt == 1 then
+                kStateTrigger_01 = 1
+            elseif kAnyPressed > kPrevPressed then 
+                kStateTrigger_01 = 1
+            endif
+            if giRetriggerAtt == 1 || (kState_01 == 0 || kState_01 == 1) then
+                kStateTrigger_01 = 1
+            endif
         endif
 
         if kPrevPressed > kAnyPressed then
             kStateTrigger_01 = 4
-        endif
-
-
-        if kRetrigg == 1 && kAnyPressed == 1 then
-            printks "kRetrigg = %f\n", 0, kRetrigg
-             kStateTrigger_01 = 1
         endif
 
         if kState_01 == 1 || kState_01 == 2 then
@@ -222,7 +194,6 @@ nchnls = 2; STEREO XD
             kEnv_01 = max(kRelPhase, 0)
         endif
 
-        printks "kState_01 %f\n = ", 0.2, kState_01
         SResult_01 sprintf "%s%d", "ENV_", iChan_01
         chnset kEnv_01, SResult_01
 
@@ -257,12 +228,15 @@ nchnls = 2; STEREO XD
     i19     0.02   7200  3; GEN 3
     i100    0.02   7200
     i1000   0.00   7200
+    ;FILTER INSTR
+    ;CONTROL INSTR
 
+      
     ;ENVELOPE INSTR
     ;----------------p4   p5  p6    p7-  p8
     ;----------------A    D   S     R--- CHAN
-    i21 0.01   7200  2    2   0.2   4    1   ;AMP ENVELOPE
-    ;i21 0.01   7200  0.5  2   0.3   4    2   ;FLT ENVELOPE
+    i21 0.01   7200  2  2   0.4   4    1
+    i21 0.01   7200  2  2   0.4   4    2
     ;i21 0.01   7200  1   2   3     4     2
 e
 </CsScore>
