@@ -155,13 +155,15 @@ nchnls = 2; STEREO XD
         endif
 
         if kPrevPressed > kAnyPressed then
+            printks "LineNo %f\n", 0, 158
             kStateTrigger_01 = 4
         endif
 
 
         if kRetrigg == 1 && kAnyPressed == 1 then
+            printks "LineNo %f\n", 0, 164
             printks "kRetrigg = %f\n", 0, kRetrigg
-             kStateTrigger_01 = 1
+            kStateTrigger_01 = 1
         endif
 
         if kState_01 == 1 || kState_01 == 2 then
@@ -183,25 +185,31 @@ nchnls = 2; STEREO XD
         endif
 
         if kStateTrigger_01 == 1  then
+            printks "LineNo %f\n", 0, 188
             kAttSnap_01 = kTime
+            kAttTimer_01 = 0
             kState_01 = 1
         endif
 
         if kState_01 == 1 && kAttTimer_01 >= iAtt_01 then
+            printks "LineNo %f\n", 0, 194
             kDecSnap_01 = kTime
             kState_01 = 2
         endif
 
         if kState_01 == 2 && kAttTimer_01 > iAtt_01 + iDec_01 then
+            printks "LineNo %f\n", 0, 200
             kState_01 = 3
         endif
 
         if kStateTrigger_01 == 4 then
+            printks "LineNo %f\n", 0, 205
             kRelSnap_01 = kTime
             kState_01 = 4
         endif
 
         if kRelTimer_01 > iRel_01 then
+            printks "LineNo %f\n", 0, 211
             kState_01 = 0
         endif
 
