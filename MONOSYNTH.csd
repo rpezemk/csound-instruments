@@ -10,17 +10,12 @@ ksmps = 441
 nchnls = 2; STEREO XD
 0dbfs  = 1
 
+;############### STATIC VALUES ##################
 #define Square #1#
 #define Pulse  #2#
 #define Triangle  #3#
 
-    gknum init 20
-    giRetriggerAtt init 1
-    gkInstr2Playing init 0
-    gkInstr2Count init 0
-
     instr 39 ; ##### ROUTING INSTR ################
-        aLFO vco .1, 5,4,0.5
         kPitch chnget "MIDI_NOTE_01"
         kstatus, kchan, kdata1, kdata2 midiin;
         if(kstatus==224) then
@@ -32,11 +27,12 @@ nchnls = 2; STEREO XD
         
 
         kPitch = kPitch + kbend
-
+        kLfo_1 chnget "LFO_OUT_1"
+        kLfo_2 chnget "LFO_OUT_2"
         ;######## GENERATOR #########
-        chnset kPitch, "GEN_NOTE_1"
-        chnset kPitch - 12 , "GEN_NOTE_2"
-        chnset kPitch + 7 , "GEN_NOTE_3"
+        chnset kPitch - 12, "GEN_NOTE_1"
+        chnset kPitch - kLfo_1 * 0.2, "GEN_NOTE_2"
+        chnset kPitch + 7 + kLfo_1 * 0.2 , "GEN_NOTE_3"
         
         asig chnget "GEN_OUTPUT_1"
         asig2 chnget "GEN_OUTPUT_2"
@@ -44,9 +40,9 @@ nchnls = 2; STEREO XD
 
 
         ;########## FILTER PARAMETERS #############
-        kFEnv chnget "ENV_1"
-        chnset kFEnv*70, "FILTER_FREQ_1"
-        chnset kFEnv*69, "FILTER_FREQ_2"
+        kFEnv chnget "ENV_2" ; => as filter env
+        chnset kFEnv*80 + kLfo_1 * 10, "FILTER_FREQ_1"
+        chnset kFEnv*69 + kLfo_2 * 15, "FILTER_FREQ_2"
         chnset kFEnv-0.3, "FILTER_RES_1"
         chnset kFEnv-0.2, "FILTER_RES_2"
 
@@ -62,22 +58,44 @@ nchnls = 2; STEREO XD
         asigRight chnget "FILTER_OUT_2"
 
         ;######### OUTPUT ###################
-        outs 0.08*asigLeft, 0.08*asigRight
+        ;outs 0.08*asigLeft, 0.08*asigRight
+        aMonoSum = 0.08*asigLeft + 0.08*asigRight
+        chnset aMonoSum, "MASTER_INPUT_01"
     endin
+
+
+
 
     instr 99999 ; ######### MASTER EFFECTS && OUTPUT ##########
+        ain1 init 0.2
+        ain1 chnget "MASTER_INPUT_01"
+        kroomsize init 0.85 ; room size (range 0 to 1)
+        kHFDamp init 0.5 ; high freq. damping (range 0 to 1)
+        aRvbL,aRvbR freeverb ain1, ain1,kroomsize,kHFDamp
+        outs aRvbL, aRvbR ; send audio to outputs
     endin
     
-
-
+    instr 5 ; ########### LFO MODULATOR #############
+        iInstanceNo init p4
+        kfreq = 5      
+        kamp = 0.5     
+        koffset = 0.5  
+        klfo lfo kamp, kfreq, 1 ; TRI 
+        ; Scale and shift LFO to go from 0 to 1
+        klfo_shifted = klfo + koffset
+        
+        SOutputName sprintf "%s%d", "LFO_OUT_", iInstanceNo
+        chnset klfo_shifted, SOutputName
+    endin
     
     instr 19 ;################# GENERATOR ###################
         iFilterNo init  p4 ;A
         SInputName sprintf "%s%d", "GEN_NOTE_", iFilterNo
-        SOutputName sprintf "%s%d", "GEN_OUTPUT_", iFilterNo
         kCV chnget SInputName
         kCV = max(kCV, 1)
-        asig vco 0.3, cpsmidinn(kCV),          $Square,     0.5
+        asig vco 0.3, cpsmidinn(kCV),  $Square,     0.5
+        
+        SOutputName sprintf "%s%d", "GEN_OUTPUT_", iFilterNo
         chnset asig, SOutputName
     endin
 
@@ -100,7 +118,8 @@ nchnls = 2; STEREO XD
 
     instr 1	;################ MIDI DETECTOR #################
         inum    notnum
-        gknum = inum
+        knum init inum
+        chnset knum, "MIDI_NOTE_01"
 
         kRetrigg init 1
         chnset kRetrigg, "MIDI_RETRIGGER_01"
@@ -108,7 +127,6 @@ nchnls = 2; STEREO XD
             kRetrigg = 0
         endif
 
-        chnset gknum, "MIDI_NOTE_01"
 
         kPressed = 1
         chnset kPressed, "KEY_PRESSED"
@@ -146,7 +164,6 @@ nchnls = 2; STEREO XD
         kState_01 init 0
         kPrevState_01 init 0
         kDecTimeSaved_01 init 0
-
 
         kNoteOnTrigger = max(kAnyPressed - kPrevPressed, 0)
 
@@ -230,7 +247,6 @@ nchnls = 2; STEREO XD
             kEnv_01 = max(kRelPhase, 0)
         endif
 
-        printks "kState_01 %f\n = ", 0.2, kState_01
         SResult_01 sprintf "%s%d", "ENV_", iChan_01
         chnset kEnv_01, SResult_01
 
@@ -255,7 +271,8 @@ nchnls = 2; STEREO XD
     f 2 0 4096 10 1	
     f0 30000
 
-
+    i5      0.01   7200  1; MODULATOR
+    i5      0.01   7200  2; MODULATOR
     i99999  0.01   7200  1; MASTER
     i20     0.01   7200  1; FILTER 01
     i20     0.01   7200  2; FILTER 02
@@ -270,7 +287,7 @@ nchnls = 2; STEREO XD
     ;----------------p4   p5  p6    p7-  p8
     ;----------------A    D   S     R--- CHAN
     i21 0.01   7200  2    2   0.2   4    1   ;AMP ENVELOPE
-    ;i21 0.01   7200  0.5  2   0.3   4    2   ;FLT ENVELOPE
+    i21 0.01   7200  0.5  2   0.6   4    2   ;FLT ENVELOPE
     ;i21 0.01   7200  1   2   3     4     2
 e
 </CsScore>
