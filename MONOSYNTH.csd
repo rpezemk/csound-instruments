@@ -6,7 +6,7 @@
 <CsInstruments>
 
 sr = 44100
-ksmps = 441
+ksmps = 44
 nchnls = 2; STEREO XD
 0dbfs  = 1
 
@@ -16,14 +16,29 @@ nchnls = 2; STEREO XD
 #define Triangle  #3#
 
     instr 39 ; ##### ROUTING INSTR ################
-        kPitch chnget "MIDI_NOTE_01"
+        kPitch chnget "PORTAMENTO_OUT_01"
+        kVel chnget "MIDI_VELOCITY_01"
         kstatus, kchan, kdata1, kdata2 midiin;
+        kModWheel init 0
+        kVolume init 0
         if(kstatus==224) then
             kbend= 2*(kdata2/64 - 1)
         endif 
-        kKbdRetrigger chnget "MIDI_RETRIGGER_01"
+        if kstatus == 176 then
+            if kdata1 == 1 then
+                kModWheel = kdata2 / 127.0
+            endif
+            if kdata1 == 7 then
+                kVolume = kdata2 / 127.0
+            endif
+            printks "kstatus %f\n", 0.1, kstatus
+            printks "kVolume %f\n", 0.1, kVolume
+            printks "kModWheel %f\n", 0.1, kModWheel
+        endif
+        
+        ;kKbdRetrigger chnget "MIDI_RETRIGGER_01"
 
-        chnset kKbdRetrigger, "ENV_RETRIGGER_1"
+        ;chnset kKbdRetrigger, "ENV_RETRIGGER_1"
         
 
         kPitch = kPitch + kbend
@@ -31,36 +46,47 @@ nchnls = 2; STEREO XD
         kLfo_2 chnget "LFO_OUT_2"
         ;######## GENERATOR #########
         chnset kPitch - 12, "GEN_NOTE_1"
-        chnset kPitch - kLfo_1 * 0.2, "GEN_NOTE_2"
-        chnset kPitch + 7 + kLfo_1 * 0.2 , "GEN_NOTE_3"
-        
+        chnset kPitch - (kVolume * kLfo_1) * 0.2, "GEN_NOTE_2"
+        chnset kPitch + 7 + (kVolume * kLfo_1) * 0.2 , "GEN_NOTE_3"
+        chnset kPitch , "GEN_NOTE_4"
+        chnset kPitch + 7 + (kVolume * kLfo_1) * 0.2 , "GEN_NOTE_6"
+        chnset kPitch + 12 - (kVolume * kLfo_1) * 0.2, "GEN_NOTE_5"
+
         asig chnget "GEN_OUTPUT_1"
         asig2 chnget "GEN_OUTPUT_2"
         asig3 chnget "GEN_OUTPUT_3"
+        asig4 chnget "GEN_OUTPUT_4"
+        asig5 chnget "GEN_OUTPUT_5"
+        asig6 chnget "GEN_OUTPUT_6"
 
 
         ;########## FILTER PARAMETERS #############
         kFEnv chnget "ENV_2" ; => as filter env
-        chnset kFEnv*80 + kLfo_1 * 10, "FILTER_FREQ_1"
-        chnset kFEnv*69 + kLfo_2 * 15, "FILTER_FREQ_2"
+        chnset kFEnv*60 + (kVel * 10) + kLfo_1 * 10 + (kModWheel * 30) - 20, "FILTER_FREQ_1"
+        chnset kFEnv*50 + (kVel * 10) + kLfo_1 * 15 + (kModWheel * 30) - 20, "FILTER_FREQ_2"
         chnset kFEnv-0.3, "FILTER_RES_1"
         chnset kFEnv-0.2, "FILTER_RES_2"
 
         ;########## AMP/MIX ###########
+        iBase = 0.2
         kAmpEnv chnget "ENV_1"
-        asum = (asig + asig2 + asig3) * kAmpEnv
-        asum2 = (asig*0.7 + asig2*1.5 + asig3) * kAmpEnv
+        kAmpEnv = kAmpEnv * (iBase + (1-iBase) * kVel)
+        asumL = (asig4 + asig5 + asig6) * kAmpEnv 
+        asumR = (asig*0.7 + asig2*1.5 + asig3) * kAmpEnv
 
         ;######## PASS AUDIO THROUTH FILTERS ###########
-        chnset asum, "FILTER_INPUT_1"
-        chnset asum2, "FILTER_INPUT_2"
+        chnset asumL, "FILTER_INPUT_1"
+        chnset asumR, "FILTER_INPUT_2"
         asigLeft chnget "FILTER_OUT_1"
         asigRight chnget "FILTER_OUT_2"
 
         ;######### OUTPUT ###################
         ;outs 0.08*asigLeft, 0.08*asigRight
-        aMonoSum = 0.08*asigLeft + 0.08*asigRight
-        chnset aMonoSum, "MASTER_INPUT_01"
+
+        kDiff = kVolume * (kLfo_2 - 0.5)
+        printks "kDiff %f\n", 0.1, kDiff
+        chnset 0.08*(1 + kDiff) * asigLeft, "MASTER_INPUT_L_01"
+        chnset 0.08*(1 - kDiff) * asigRight, "MASTER_INPUT_R_01"
     endin
 
 
@@ -68,16 +94,18 @@ nchnls = 2; STEREO XD
 
     instr 99999 ; ######### MASTER EFFECTS && OUTPUT ##########
         ain1 init 0.2
-        ain1 chnget "MASTER_INPUT_01"
-        kroomsize init 0.85 ; room size (range 0 to 1)
-        kHFDamp init 0.5 ; high freq. damping (range 0 to 1)
-        aRvbL,aRvbR freeverb ain1, ain1,kroomsize,kHFDamp
+        ain2 init 0.2
+        ain1 chnget "MASTER_INPUT_L_01"
+        ain2 chnget "MASTER_INPUT_R_01"
+        kroomsize init 0.95 ; room size (range 0 to 1)
+        kHFDamp init 0.2 ; high freq. damping (range 0 to 1)
+        aRvbL,aRvbR freeverb ain1, ain2,kroomsize,kHFDamp
         outs aRvbL, aRvbR ; send audio to outputs
     endin
     
     instr 5 ; ########### LFO MODULATOR #############
-        iInstanceNo init p4
-        kfreq = 5      
+        kfreq init p4    
+        iInstanceNo init p5
         kamp = 0.5     
         koffset = 0.5  
         klfo lfo kamp, kfreq, 1 ; TRI 
@@ -120,6 +148,9 @@ nchnls = 2; STEREO XD
         inum    notnum
         knum init inum
         chnset knum, "MIDI_NOTE_01"
+        iVel    veloc    ;
+        kVel = iVel
+        chnset kVel/127, "MIDI_VELOCITY_01" ; SCALED
 
         kRetrigg init 1
         chnset kRetrigg, "MIDI_RETRIGGER_01"
@@ -127,12 +158,23 @@ nchnls = 2; STEREO XD
             kRetrigg = 0
         endif
 
-
         kPressed = 1
         chnset kPressed, "KEY_PRESSED"
         kThisTrig init 1
         kThisTrig = 0
     endin
+
+    instr 8 ;############# PORTAMENTO ################
+        kCurr init 5
+        kPrevNote init 5
+        kNote init 5
+        kNote chnget "MIDI_NOTE_01"
+
+        kRes portk kNote, .03
+
+        chnset kRes, "PORTAMENTO_OUT_01"
+    endin
+
 
     instr 21 ;############## ENVELOPE INSTR ##############
         iAtt_01 init  p4 ;A
@@ -258,8 +300,6 @@ nchnls = 2; STEREO XD
     endin
 
     instr 1000 ; REMOVE KEYPRESS 
-        kPress chnget "KEY_PRESSED"
-        ;printks "kAnyPressed %f\n", 0, kPress
         kPress = 0
         chnset kPress, "KEY_PRESSED"
     endin
@@ -271,8 +311,10 @@ nchnls = 2; STEREO XD
     f 2 0 4096 10 1	
     f0 30000
 
-    i5      0.01   7200  1; MODULATOR
-    i5      0.01   7200  2; MODULATOR
+    i5      0.01   7200  5 1; LFO1
+    i5      0.01   7200  0.5 2; LFO2
+
+    i8      0.01   7200  2; MODULATOR
     i99999  0.01   7200  1; MASTER
     i20     0.01   7200  1; FILTER 01
     i20     0.01   7200  2; FILTER 02
@@ -280,7 +322,9 @@ nchnls = 2; STEREO XD
     i19     0.02   7200  1; GEN 1
     i19     0.02   7200  2; GEN 2
     i19     0.02   7200  3; GEN 3
-    i100    0.02   7200
+    i19     0.02   7200  4; GEN 4
+    i19     0.02   7200  5; GEN 5
+    i19     0.02   7200  6; GEN 6
     i1000   0.00   7200
 
     ;ENVELOPE INSTR
