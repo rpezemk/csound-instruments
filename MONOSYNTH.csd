@@ -25,7 +25,7 @@ nchnls = 2; STEREO XD
         kstatus, kchan, kdata1, kdata2 midiin;
         if(kstatus==224) then
             kbend= 2*(kdata2/64 - 1)
-        endif
+        endif 
         kPitch = kPitch + kbend
         chnset kPitch, "GEN_NOTE_1"
         chnset kPitch - 12 , "GEN_NOTE_2"
