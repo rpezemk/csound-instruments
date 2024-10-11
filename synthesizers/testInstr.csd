@@ -21,8 +21,8 @@ instr 1199 ;############ UDP LISTENER #############
     aout oscil 0.005, cpsmidinn(kpitch + 40), 1   ; Oscillator at received frequency
     out aout, aout
 endin
-instr 9999 ; dummy
 
+instr 9999 ; dummy
 endin
 
 </CsInstruments>
