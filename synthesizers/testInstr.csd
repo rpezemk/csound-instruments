@@ -1,6 +1,6 @@
 <CsoundSynthesizer>
 <CsOptions>
--+rtmidi=alsa -Ma -odac -b 512 -B1024
+-+rtmidi=portmidi -Ma -odac -b 512 -B1024
 </CsOptions>
 <CsInstruments>
 
