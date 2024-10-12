@@ -5,6 +5,8 @@ class StepSequencer():
         self.func = func
         self.currIdx = 0
         self.seqLen = len(sequence)
+        
+        # stub:
         self.receiverNo = receiverNo
         pass
     
