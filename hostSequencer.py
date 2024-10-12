@@ -16,8 +16,8 @@ notes = [
     Note(7,  70, 0.3, 0, 0),
 ]
 
-
 sequencer = StepSequencer(notes, 0.5, lambda list: client.send_message("/notetrigger", list), 0)
+
 while True:
     sequencer.playStep()
     time.sleep(0.2)
