@@ -20,6 +20,9 @@ instr 1199 ;############ UDP LISTENER #############
     kghost init 0
     ; //TODO kreceiverNo implementation
     kNoteTrigger OSClisten gihandle, "/notetrigger", "ffffff", kpitch, kveloc, klen, ktied, kghost, kreceiverNo
+    
+    ; //TODO send event to kreceiverNo instrument
+
     aout oscil 0.005, cpsmidinn(kpitch + 40), 1   ; Oscillator at received frequency
     out aout, aout
 endin
