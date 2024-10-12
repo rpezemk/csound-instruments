@@ -1,12 +1,9 @@
 import time
 from pythonosc import udp_client
-from datamodel.Notes import Note
-from datamodel.Notes import StepSequencer
+from datamodel.Sequencers import Note
+from datamodel.Sequencers import StepSequencer
 
-# Create an OSC client to send messages to Csound (localhost, port 7400)
 client = udp_client.SimpleUDPClient("127.0.0.1", 37707)
-
-
 
 notes = [
     Note(0,  70, 0.3, 0, 0),
