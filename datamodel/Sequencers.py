@@ -1,10 +1,11 @@
 class StepSequencer():
-    def __init__(self, sequence :list, period :float, func):
+    def __init__(self, sequence: list, period: float, func, receiverNo: int):
         self.sequence = sequence
         self.period = period
         self.func = func
         self.currIdx = 0
         self.seqLen = len(sequence)
+        self.receiverNo = receiverNo
         pass
     
     def playStep(self):
