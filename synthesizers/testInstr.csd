@@ -12,12 +12,14 @@ nchnls = 2; STEREO XD
 gihandle OSCinit 37707
 
 instr 1199 ;############ UDP LISTENER #############
+    kreceiverNo init 0
     kpitch init 30
     kveloc init 0
     klen   init 0
     ktied  init 0
     kghost init 0
-    kNoteTrigger OSClisten gihandle, "/notetrigger", "fffff", kpitch, kveloc, klen, ktied, kghost
+    ; //TODO kreceiverNo implementation
+    kNoteTrigger OSClisten gihandle, "/notetrigger", "ffffff", kpitch, kveloc, klen, ktied, kghost, kreceiverNo
     aout oscil 0.005, cpsmidinn(kpitch + 40), 1   ; Oscillator at received frequency
     out aout, aout
 endin

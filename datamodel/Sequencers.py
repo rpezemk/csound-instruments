@@ -5,15 +5,15 @@ class StepSequencer():
         self.func = func
         self.currIdx = 0
         self.seqLen = len(sequence)
-        
-        # stub:
         self.receiverNo = receiverNo
         pass
     
     def playStep(self):
         self.currNote = self.sequence[self.currIdx]
         if self.func is not None:
-            self.func(self.currNote.toList())
+            values = self.currNote.toList()
+            values.append(self.receiverNo)
+            self.func(values)
         self.currIdx += 1
         self.currIdx = self.currIdx % self.seqLen
 
