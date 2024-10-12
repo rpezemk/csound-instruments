@@ -1,7 +1,7 @@
 import time
 from pythonosc import udp_client
-from datamodel.Sequencers import Note
-from datamodel.Sequencers import StepSequencer
+from sequencers.Sequencers import Note
+from sequencers.Sequencers import StepSequencer
 
 client = udp_client.SimpleUDPClient("127.0.0.1", 37707)
 
