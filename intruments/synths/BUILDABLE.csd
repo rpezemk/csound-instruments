@@ -17,19 +17,72 @@
 
     ;############### UPD PORT ###############
     gihandle OSCinit 37707
+
+    ;################ REAL TIME MIDI DETECTOR #################
+    instr 1	
+        inum      notnum
+        iMidiChan midichn
+        knum init inum
+
+        SChanName sprintfk "%s_%d", "MIDI_NOTE", iMidiChan
+
+        chnset knum, SChanName        
+
+        iVel    veloc    ;
+        kVel = iVel
+
+        SChanName sprintfk "%s_%d", "MIDI_VELOCITY", iMidiChan
+        chnset kVel/127, SChanName ; SCALED
+
+        kRetrigg init 1
+        SChanName sprintfk "%s_%d", "MIDI_RETRIGGER", iMidiChan
+        chnset kRetrigg, SChanName
+
+        if kRetrigg == 1 then
+            kRetrigg = 0
+        endif
+
+        kPressed = 1
+        SChanName sprintfk "%s_%d", "KEY_PRESSED", iMidiChan
+        chnset kPressed, SChanName
+    endin
+
+
+    ; ############## INTERNAL PRESS ###############
+
+    ;############# PORTAMENTO ################
+    instr 8 
+        iInstanceNo init p4
+        iMidiChan init p5
+        kCurr init 5
+        kPrevNote init 5
+        kNote init 5
+        SChanName sprintfk "%s_%d", "MIDI_NOTE", iMidiChan
+        kNote chnget SChanName
+
+        kRes portk kNote, .03
+        SChanName sprintfk "%s_%d", "PORTAMENTO_OUT", iMidiChan
+        chnset kRes, SChanName
+    endin
     
 
-    ; ################ OSC RECEIVER #################
+    ; ################ OSC RECEIVER -- ROUTING CREATOR #################
     instr 99077 
     
-        kDestInstrNo init 0
-        kInstanceNo init 0
-        kParamNo init 0
-        kValue init 0
-        kGotData OSClisten gihandle, "/mono/create", "ffff", kDestInstrNo, kInstanceNo, kParamNo, kValue
+        kInstanceNo   init 0
+        kRoutingCount init 1
+        kMidiChan     init 0
+        kEnvNo        init 1
+        kGotData OSClisten gihandle, "/mono/createrouting", "ff", kInstanceNo, kMidiChan
         if kGotData == 1 then
-            SChanName sprintfk "%s_%d_%d_%d", "OSC_DATA", kDestInstrNo, kInstanceNo, kParamNo
-            chnset kValue, SChanName
+
+            event "i", 39,  0,  3600*4, kInstanceNo, kMidiChan
+            event "i",  8,  0,  3600*4, kInstanceNo, kMidiChan
+            ;i21 0.01           7200    2    2   0.2   4    1   ;AMP ENVELOPE
+            event "i", 21,  0,  3600*4, 1,   2,  0.3,  4,   1
+            event "i", 21,  0,  3600*4, 1,   2,  0.3,  4,   2
+            kRoutingCount = kRoutingCount + 1
+            kEnvNo = kEnvNo + 1
         endif
 
         kDestInstrNo init 0
@@ -44,10 +97,12 @@
     endin
 
 
+
     ;############## ROUTING INSTR ################
     instr 39
         iRoutingNo  init p1
-
+        iInstanceNo init p4
+        iMidiChan init p5
         kTranspose  init 0
         kPortamento init 0
         kAllowRetr  init 0
@@ -86,11 +141,13 @@
         kF2_v_track  init 12
         kF2_mod      init 30
 
-
-        kPitch chnget "PORTAMENTO_OUT_01"
+        SChanName sprintfk "%s_%d", "PORTAMENTO_OUT", iMidiChan
+        kPitch chnget SChanName
         kPitch = kPitch + kTranspose
 
-        kVel chnget "MIDI_VELOCITY_01"
+
+        SChanName sprintfk "%s_%d", "MIDI_VELOCITY", iMidiChan
+        kVel chnget SChanName
         kstatus, kchan, kdata1, kdata2 midiin;
         kModWheel init 0
         kVolume init 0
@@ -157,8 +214,8 @@
 
         kDiff = kVolume * (kLfo_2 - 0.5)
 
-        chnset 0.1 * asigLeft, "MASTER_INPUT_L_01"
-        chnset 0.1 * asigRight, "MASTER_INPUT_R_01"
+        chnset 0.1 * asigLeft, "MASTER_INPUT_L_1"
+        chnset 0.1 * asigRight, "MASTER_INPUT_R_1"
     endin
 
 
@@ -167,8 +224,8 @@
     instr 99999 
         ain1 init 0.2
         ain2 init 0.2
-        ain1 chnget "MASTER_INPUT_L_01"
-        ain2 chnget "MASTER_INPUT_R_01"
+        ain1 chnget "MASTER_INPUT_L_1"
+        ain2 chnget "MASTER_INPUT_R_1"
         kroomsize init 0.95 
         kHFDamp init 0.2 
         aRvbL,aRvbR freeverb ain1, ain2,kroomsize,kHFDamp
@@ -217,170 +274,117 @@
 
 
 
-    ;################ REAL TIME MIDI DETECTOR #################
-    instr 1	
-        inum    notnum
-        knum init inum
-        chnset knum, "MIDI_NOTE_01"
-        iVel    veloc    ;
-        kVel = iVel
-        chnset kVel/127, "MIDI_VELOCITY_01" ; SCALED
-
-        kRetrigg init 1
-        chnset kRetrigg, "MIDI_RETRIGGER_01"
-        if kRetrigg == 1 then
-            kRetrigg = 0
-        endif
-
-        kPressed = 1
-        chnset kPressed, "KEY_PRESSED"
-    endin
-
-
-    ; ############## INTERNAL PRESS ###############
-    instr 27
-        inum init p5
-        knum init inum
-        chnset knum, "MIDI_NOTE_01"
-        iVel    veloc    ;
-        kVel = iVel
-        chnset kVel/127, "MIDI_VELOCITY_01" ; SCALED
-
-        kRetrigg init 1
-        chnset kRetrigg, "MIDI_RETRIGGER_01"
-        if kRetrigg == 1 then
-            kRetrigg = 0
-        endif
-
-        kPressed = 1
-        chnset kPressed, "KEY_PRESSED"
-    endin
-
-
-
-    ;############# PORTAMENTO ################
-    instr 8 
-        kCurr init 5
-        kPrevNote init 5
-        kNote init 5
-        kNote chnget "MIDI_NOTE_01"
-
-        kRes portk kNote, .03
-
-        chnset kRes, "PORTAMENTO_OUT_01"
-    endin
-
 
     ;############## ENVELOPE INSTR ##############
     instr 21 
-        iAtt_01 init  p4 ;A
-        iDec_01 init  p5 ;D
-        iSus_01 init  p6 ;S
-        iRel_01 init  p7 ;R
-        iChan_01 init p8 ;Ch
-
+        iAtt_1 init  p4 ;A
+        iDec_1 init  p5 ;D
+        iSus_1 init  p6 ;S
+        iRel_1 init  p7 ;R
+        iChan_1 init p8 ;Ch
+        iMidiChan init 1
         kTime times
-        kSavedEnv_01 init 0
-        kEnv_01 init 0
-        kAttTimer_01 init 0
-        kDecTimer_01 init 0
-        kRelTimer_01 init 0
+        kSavedEnv_1 init 0
+        kEnv_1 init 0
+        kAttTimer_1 init 0
+        kDecTimer_1 init 0
+        kRelTimer_1 init 0
+        SChanName sprintfk "%s_%d", "KEY_PRESSED", iMidiChan
+        kAnyPressed chnget SChanName
 
-        kAnyPressed chnget "KEY_PRESSED"
-
-        SRetriggerName sprintf "%s%d", "ENV_RETRIGGER_", iChan_01
+        SRetriggerName sprintf "%s_%d", "ENV_RETRIGGER", iChan_1
         kRetrigg chnget SRetriggerName
 
         kPrevPressed init 0
 
-        kAttSnap_01 init 0
-        kDecSnap_01 init 0
-        kRelSnap_01 init 0
+        kAttSnap_1 init 0
+        kDecSnap_1 init 0
+        kRelSnap_1 init 0
 
-        kStateTrigger_01 = 0 ; 1 -> A, 4 -> R /// ADSR
+        kStateTrigger_1 = 0 ; 1 -> A, 4 -> R /// ADSR
 
-        kState_01 init 0
-        kPrevState_01 init 0
-        kDecTimeSaved_01 init 0
+        kState_1 init 0
+        kPrevState_1 init 0
+        kDecTimeSaved_1 init 0
 
         kNoteOnTrigger = max(kAnyPressed - kPrevPressed, 0)
 
         if kAnyPressed > kPrevPressed then
-            kStateTrigger_01 = 1
+            kStateTrigger_1 = 1
         endif
 
         if kPrevPressed > kAnyPressed then
-            kStateTrigger_01 = 4
+            kStateTrigger_1 = 4
         endif
 
 
         if kRetrigg == 1 && kAnyPressed == 1 then
-            kStateTrigger_01 = 1
+            kStateTrigger_1 = 1
         endif
 
-        if kState_01 == 1 || kState_01 == 2 then
-            kAttTimer_01 = kTime - kAttSnap_01
+        if kState_1 == 1 || kState_1 == 2 then
+            kAttTimer_1 = kTime - kAttSnap_1
         else
-            kAttTimer_01 = 0
+            kAttTimer_1 = 0
         endif
 
-        if kState_01 == 2 then 
-            kDecTimer_01 = kTime - kDecSnap_01
+        if kState_1 == 2 then 
+            kDecTimer_1 = kTime - kDecSnap_1
         else 
-            kDecTimer_01 = 0
+            kDecTimer_1 = 0
         endif
 
-        if kState_01 == 4  then
-            kRelTimer_01 = kTime - kRelSnap_01
+        if kState_1 == 4  then
+            kRelTimer_1 = kTime - kRelSnap_1
         else
-            kRelTimer_01 = 0
+            kRelTimer_1 = 0
         endif
 
-        if kStateTrigger_01 == 1  then
-            kAttSnap_01 = kTime
-            kAttTimer_01 = 0
-            kState_01 = 1
+        if kStateTrigger_1 == 1  then
+            kAttSnap_1 = kTime
+            kAttTimer_1 = 0
+            kState_1 = 1
         endif
 
-        if kState_01 == 1 && kAttTimer_01 >= iAtt_01 then
-            kDecSnap_01 = kTime
-            kState_01 = 2
+        if kState_1 == 1 && kAttTimer_1 >= iAtt_1 then
+            kDecSnap_1 = kTime
+            kState_1 = 2
         endif
 
-        if kState_01 == 2 && kAttTimer_01 > iAtt_01 + iDec_01 then
-            kState_01 = 3
+        if kState_1 == 2 && kAttTimer_1 > iAtt_1 + iDec_1 then
+            kState_1 = 3
         endif
 
-        if kStateTrigger_01 == 4 then
-            kRelSnap_01 = kTime
-            kState_01 = 4
+        if kStateTrigger_1 == 4 then
+            kRelSnap_1 = kTime
+            kState_1 = 4
         endif
 
-        if kRelTimer_01 > iRel_01 then
-            kState_01 = 0
+        if kRelTimer_1 > iRel_1 then
+            kState_1 = 0
         endif
 
-        if kState_01 == 4 then
-            if kPrevState_01 == 1 || kPrevState_01 == 2 || kPrevState_01 == 3 then
-                kSavedEnv_01 = kEnv_01
+        if kState_1 == 4 then
+            if kPrevState_1 == 1 || kPrevState_1 == 2 || kPrevState_1 == 3 then
+                kSavedEnv_1 = kEnv_1
             endif
         endif
 
-        if kState_01 == 1 then
-            kEnv_01 = kAttTimer_01 / iAtt_01
-        elseif kState_01 == 2 then
-            kEnv_01 = iSus_01 +  (1 - iSus_01) * (iDec_01 - kDecTimer_01)/iDec_01 
-        elseif kState_01 == 3 then
-            kEnv_01 = iSus_01
-        elseif kState_01 == 4 then
-            kRelPhase = (iRel_01 - kRelTimer_01)/iRel_01  + (kSavedEnv_01 - 1)
-            kEnv_01 = max(kRelPhase, 0)
+        if kState_1 == 1 then
+            kEnv_1 = kAttTimer_1 / iAtt_1
+        elseif kState_1 == 2 then
+            kEnv_1 = iSus_1 +  (1 - iSus_1) * (iDec_1 - kDecTimer_1)/iDec_1 
+        elseif kState_1 == 3 then
+            kEnv_1 = iSus_1
+        elseif kState_1 == 4 then
+            kRelPhase = (iRel_1 - kRelTimer_1)/iRel_1  + (kSavedEnv_1 - 1)
+            kEnv_1 = max(kRelPhase, 0)
         endif
 
-        SResult_01 sprintf "%s%d", "ENV_", iChan_01
-        chnset kEnv_01, SResult_01
+        SResult_1 sprintf "%s%d", "ENV_", iChan_1
+        chnset kEnv_1, SResult_1
 
-        kPrevState_01 = kState_01
+        kPrevState_1 = kState_1
         kPrevPressed = kAnyPressed
         kAnyPressed = 0
         kNoteOnTrigger = 0
@@ -390,6 +394,22 @@
     instr 1000 ; REMOVE KEYPRESS 
         kPress = 0
         chnset kPress, "KEY_PRESSED"
+        chnset kPress, "KEY_PRESSED_1"
+        chnset kPress, "KEY_PRESSED_2"
+        chnset kPress, "KEY_PRESSED_3"
+        chnset kPress, "KEY_PRESSED_4"
+        chnset kPress, "KEY_PRESSED_5"
+        chnset kPress, "KEY_PRESSED_6"
+        chnset kPress, "KEY_PRESSED_7"
+        chnset kPress, "KEY_PRESSED_8"
+        chnset kPress, "KEY_PRESSED_9"
+        chnset kPress, "KEY_PRESSED_10"
+        chnset kPress, "KEY_PRESSED_11"
+        chnset kPress, "KEY_PRESSED_12"
+        chnset kPress, "KEY_PRESSED_13"
+        chnset kPress, "KEY_PRESSED_14"
+        chnset kPress, "KEY_PRESSED_15"
+        chnset kPress, "KEY_PRESSED_16"
     endin
         
 </CsInstruments>
@@ -405,31 +425,26 @@
 ;##########################################
 ; instrNo   start  dur.  
     i3      0.01   7200  ; INITIAL INSTR
+;                          instance
+;                            no.
+    i5      0.01   7200       1       5; LFO1
+    i5      0.01   7200       2       0.5; LFO2
+     
 
-    i5      0.01   7200  1   5; LFO1
-    i5      0.01   7200  2   0.5; LFO2
+    i99999  0.01   7200       1          ; MASTER
+    i99077  0.01   7200       1          ; UDP OSC LISTENER
+    i20     0.01   7200       1          ; FILTER 01
+    i20     0.01   7200       2          ; FILTER 02
 
-    i8      0.01   7200  2        ; MODULATOR
-    i99999  0.01   7200  1        ; MASTER
-    i99077  0.01   7200  1        ; UDP OSC LISTENER
-    i20     0.01   7200  1        ; FILTER 01
-    i20     0.01   7200  2        ; FILTER 02
-    i39     0.01   7200  1        ; ROUTING INSTR
-
-    i19     0.02   7200  1        ; GEN 1
-    i19     0.02   7200  2        ; GEN 2
-    i19     0.02   7200  3        ; GEN 3
-    i19     0.02   7200  4        ; GEN 4
-    i19     0.02   7200  5        ; GEN 5
-    i19     0.02   7200  6        ; GEN 6
+    
+    i19     0.02   7200       1          ; GEN 1
+    i19     0.02   7200       2          ; GEN 2
+    i19     0.02   7200       3          ; GEN 3
+    i19     0.02   7200       4          ; GEN 4
+    i19     0.02   7200       5          ; GEN 5
+    i19     0.02   7200       6          ; GEN 6
 
     i1000   0.00   7200           ; KEYPRESS SET TO ZERO
-
-
-    ;p1  p2     p3     p4   p5  p6    p7-  p8
-    ;              ;;  A    D   S     R--- CHAN
-    i21 0.01   7200    2    2   0.2   4    1   ;AMP ENVELOPE
-    i21 0.01   7200    0.5  2   0.6   4    2   ;FLT ENVELOPE
 
 e
 </CsScore>

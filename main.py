@@ -2,6 +2,7 @@ import time
 from pythonosc import udp_client
 from backend.sequencers.Sequencers import Note
 from backend.sequencers.Sequencers import StepSequencer
+from backend.sequencers.Sequencers import Routing
 
 client = udp_client.SimpleUDPClient("127.0.0.1", 37707)
 
@@ -27,6 +28,9 @@ routingInstr = 39
 instanceNo = 1
 outVolParNo = 1
 
+r = Routing(1, 1)
+
+client.send_message("/mono/createrouting", r.toList())
 
     
 while True:

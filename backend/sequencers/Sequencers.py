@@ -39,3 +39,11 @@ class Note():
         return res
       
 
+class Routing():
+    def __init__(self, routingNo: int, midiChan: int):
+        self.routingNo = routingNo
+        self.midiChan = midiChan
+        
+    def toList(self):
+        res = [self.routingNo, self.midiChan]        
+        return res
