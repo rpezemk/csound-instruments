@@ -1,7 +1,7 @@
 import time
 from pythonosc import udp_client
-from sequencers.Sequencers import Note
-from sequencers.Sequencers import StepSequencer
+from backend.sequencers.Sequencers import Note
+from backend.sequencers.Sequencers import StepSequencer
 
 client = udp_client.SimpleUDPClient("127.0.0.1", 37707)
 
@@ -18,7 +18,19 @@ notes = [
 
 sequencer = StepSequencer(notes, 0.5, lambda list: client.send_message("/notetrigger", list), 0)
 
-while True:
-    sequencer.playStep()
-    time.sleep(0.2)
+# while True:
+#     sequencer.playStep()
+#     time.sleep(0.2)
+
+
+routingInstr = 39
+instanceNo = 1
+outVolParNo = 1
+
+
     
+while True:
+    client.send_message("/monosynth", [routingInstr, instanceNo, outVolParNo, 0])
+    time.sleep(1)
+    client.send_message("/monosynth", [routingInstr, instanceNo, outVolParNo, 1])
+    time.sleep(1)

@@ -3,9 +3,9 @@ class StepSequencer():
         self.sequence = sequence
         self.period = period
         self.func = func
-        self.currIdx = 0
         self.seqLen = len(sequence)
         self.receiverNo = receiverNo
+        self.currIdx = 0
         pass
     
     def playStep(self):
@@ -19,7 +19,7 @@ class StepSequencer():
 
 class Note():
     def __init__(
-            self, 
+            self,
             pitch: int, 
             velocity: int, 
             duration: float, 
@@ -39,4 +39,3 @@ class Note():
         return res
       
 
-      

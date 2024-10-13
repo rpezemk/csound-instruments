@@ -23,7 +23,7 @@ instr 1199 ;############ UDP LISTENER #############
     
     ; //TODO send event to kreceiverNo instrument
 
-    aout oscil 0.005, cpsmidinn(kpitch + 40), 1   ; Oscillator at received frequency
+    aout oscil 0.5, cpsmidinn(kpitch + 40), 1   ; Oscillator at received frequency
     out aout, aout
 endin
 

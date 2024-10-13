@@ -14,6 +14,21 @@ nchnls = 2; STEREO XD
 #define Square #1#
 #define Pulse  #2#
 #define Triangle  #3#
+    gihandle OSCinit 37707
+
+    instr 99077 ; OSC RECEIVER 
+        kDestInstrNo init 0
+        kInstanceNo init 0
+        kParamNo init 0
+        kValue init 0
+        kGotData OSClisten gihandle, "/monosynth", "ffff", kDestInstrNo, kInstanceNo, kParamNo, kValue
+        if kGotData == 1 then
+            SChanName sprintfk "%s_%d_%d_%d", "OSC_DATA", kDestInstrNo, kInstanceNo, kParamNo
+            chnset kValue, SChanName
+            printks "OSC -> SChanName%s\n", 0, SChanName
+            printks "OSC -> kValue%f\n", 0, kValue
+        endif
+    endin
 
     instr 39 ; ##### ROUTING INSTR ################
         kPitch chnget "PORTAMENTO_OUT_01"
@@ -31,16 +46,8 @@ nchnls = 2; STEREO XD
             if kdata1 == 7 then
                 kVolume = kdata2 / 127.0
             endif
-            printks "kstatus %f\n", 0.1, kstatus
-            printks "kVolume %f\n", 0.1, kVolume
-            printks "kModWheel %f\n", 0.1, kModWheel
         endif
-        
-        ;kKbdRetrigger chnget "MIDI_RETRIGGER_01"
-
-        ;chnset kKbdRetrigger, "ENV_RETRIGGER_1"
-        
-
+    
         kPitch = kPitch + kbend
         kLfo_1 chnget "LFO_OUT_1"
         kLfo_2 chnget "LFO_OUT_2"
@@ -84,9 +91,13 @@ nchnls = 2; STEREO XD
         ;outs 0.08*asigLeft, 0.08*asigRight
 
         kDiff = kVolume * (kLfo_2 - 0.5)
-        printks "kDiff %f\n", 0.1, kDiff
-        chnset 0.08*(1 + kDiff) * asigLeft, "MASTER_INPUT_L_01"
-        chnset 0.08*(1 - kDiff) * asigRight, "MASTER_INPUT_R_01"
+
+        SChanName sprintfk "%s_%d_%d_%d", "OSC_DATA", p1, p4, 1
+        kExternal chnget SChanName
+        printks "ROU -> SChanName %s\n", 0, SChanName
+        printks "ROU -> kExternal %f\n", 0, kExternal
+        chnset kExternal * 0.08*(1 + kDiff) * asigLeft, "MASTER_INPUT_L_01"
+        chnset kExternal * 0.08*(1 - kDiff) * asigRight, "MASTER_INPUT_R_01"
     endin
 
 
@@ -104,14 +115,12 @@ nchnls = 2; STEREO XD
     endin
     
     instr 5 ; ########### LFO MODULATOR #############
-        kfreq init p4    
-        iInstanceNo init p5
+        iInstanceNo init p4
+        kfreq init p5    
         kamp = 0.5     
         koffset = 0.5  
         klfo lfo kamp, kfreq, 1 ; TRI 
-        ; Scale and shift LFO to go from 0 to 1
         klfo_shifted = klfo + koffset
-        
         SOutputName sprintf "%s%d", "LFO_OUT_", iInstanceNo
         chnset klfo_shifted, SOutputName
     endin
@@ -122,7 +131,6 @@ nchnls = 2; STEREO XD
         kCV chnget SInputName
         kCV = max(kCV, 1)
         asig vco 0.3, cpsmidinn(kCV),  $Square,     0.5
-        
         SOutputName sprintf "%s%d", "GEN_OUTPUT_", iFilterNo
         chnset asig, SOutputName
     endin
@@ -214,14 +222,11 @@ nchnls = 2; STEREO XD
         endif
 
         if kPrevPressed > kAnyPressed then
-            printks "LineNo %f\n", 0, 158
             kStateTrigger_01 = 4
         endif
 
 
         if kRetrigg == 1 && kAnyPressed == 1 then
-            printks "LineNo %f\n", 0, 164
-            printks "kRetrigg = %f\n", 0, kRetrigg
             kStateTrigger_01 = 1
         endif
 
@@ -244,31 +249,26 @@ nchnls = 2; STEREO XD
         endif
 
         if kStateTrigger_01 == 1  then
-            printks "LineNo %f\n", 0, 188
             kAttSnap_01 = kTime
             kAttTimer_01 = 0
             kState_01 = 1
         endif
 
         if kState_01 == 1 && kAttTimer_01 >= iAtt_01 then
-            printks "LineNo %f\n", 0, 194
             kDecSnap_01 = kTime
             kState_01 = 2
         endif
 
         if kState_01 == 2 && kAttTimer_01 > iAtt_01 + iDec_01 then
-            printks "LineNo %f\n", 0, 200
             kState_01 = 3
         endif
 
         if kStateTrigger_01 == 4 then
-            printks "LineNo %f\n", 0, 205
             kRelSnap_01 = kTime
             kState_01 = 4
         endif
 
         if kRelTimer_01 > iRel_01 then
-            printks "LineNo %f\n", 0, 211
             kState_01 = 0
         endif
 
@@ -310,21 +310,22 @@ nchnls = 2; STEREO XD
     f 1 0 65536 10 1
     f 2 0 4096 10 1	
     f0 30000
+; instrNo   start  dur.  
+    i5      0.01   7200  1   5; LFO1
+    i5      0.01   7200  2   0.5; LFO2
 
-    i5      0.01   7200  5 1; LFO1
-    i5      0.01   7200  0.5 2; LFO2
-
-    i8      0.01   7200  2; MODULATOR
-    i99999  0.01   7200  1; MASTER
-    i20     0.01   7200  1; FILTER 01
-    i20     0.01   7200  2; FILTER 02
-    i39     0.01   7200  
-    i19     0.02   7200  1; GEN 1
-    i19     0.02   7200  2; GEN 2
-    i19     0.02   7200  3; GEN 3
-    i19     0.02   7200  4; GEN 4
-    i19     0.02   7200  5; GEN 5
-    i19     0.02   7200  6; GEN 6
+    i8      0.01   7200  2        ; MODULATOR
+    i99999  0.01   7200  1        ; MASTER
+    i99077  0.01   7200  1        ; UDP OSC LISTENER
+    i20     0.01   7200  1        ; FILTER 01
+    i20     0.01   7200  2        ; FILTER 02
+    i39     0.01   7200  1        ; ROUTING INSTR
+    i19     0.02   7200  1        ; GEN 1
+    i19     0.02   7200  2        ; GEN 2
+    i19     0.02   7200  3        ; GEN 3
+    i19     0.02   7200  4        ; GEN 4
+    i19     0.02   7200  5        ; GEN 5
+    i19     0.02   7200  6        ; GEN 6
     i1000   0.00   7200
 
     ;ENVELOPE INSTR
