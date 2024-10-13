@@ -17,14 +17,21 @@
 
     ;############### UPD PORT ###############
     gihandle OSCinit 37707
-
-
-
-
-
+    
 
     ; ################ OSC RECEIVER #################
     instr 99077 
+    
+        kDestInstrNo init 0
+        kInstanceNo init 0
+        kParamNo init 0
+        kValue init 0
+        kGotData OSClisten gihandle, "/mono/create", "ffff", kDestInstrNo, kInstanceNo, kParamNo, kValue
+        if kGotData == 1 then
+            SChanName sprintfk "%s_%d_%d_%d", "OSC_DATA", kDestInstrNo, kInstanceNo, kParamNo
+            chnset kValue, SChanName
+        endif
+
         kDestInstrNo init 0
         kInstanceNo init 0
         kParamNo init 0
@@ -33,21 +40,62 @@
         if kGotData == 1 then
             SChanName sprintfk "%s_%d_%d_%d", "OSC_DATA", kDestInstrNo, kInstanceNo, kParamNo
             chnset kValue, SChanName
-            printks "OSC -> SChanName%s\n", 0, SChanName
-            printks "OSC -> kValue%f\n", 0, kValue
         endif
     endin
 
 
     ;############## ROUTING INSTR ################
-    instr 39 
+    instr 39
+        iRoutingNo  init p1
+
+        kTranspose  init 0
+        kPortamento init 0
+        kAllowRetr  init 0
+        kPBendRange init 2
+        
+        kG1_Type    init 1
+        kG2_Type    init 1
+        kG3_Type    init 1
+        kG4_Type    init 1
+        kG5_Type    init 1
+        kG6_Type    init 1
+
+        kG1_Tran    init -12
+        kG2_Tran    init 12
+        kG3_Tran    init -12
+        kG4_Tran    init -12
+        kG5_Tran    init 7
+        kG6_Tran    init 24
+
+        kG1_Mix    init 1
+        kG2_Mix    init 1
+        kG3_Mix    init 1
+        kG4_Mix    init 1
+        kG5_Mix    init 1
+        kG6_Mix    init 1
+
+        kF1_F        init 23
+        kF1_Q        init 0.3
+        kF1_p_track  init 12
+        kF1_v_track  init 12
+        kF1_mod      init 30
+
+        kF2_F      init 21
+        kF2_Q      init 0.3
+        kF2_p_track  init 12
+        kF2_v_track  init 12
+        kF2_mod      init 30
+
+
         kPitch chnget "PORTAMENTO_OUT_01"
+        kPitch = kPitch + kTranspose
+
         kVel chnget "MIDI_VELOCITY_01"
         kstatus, kchan, kdata1, kdata2 midiin;
         kModWheel init 0
         kVolume init 0
         if(kstatus==224) then
-            kbend= 2*(kdata2/64 - 1)
+            kbend= kPBendRange*(kdata2/64 - 1)
         endif 
         if kstatus == 176 then
             if kdata1 == 1 then
@@ -62,25 +110,32 @@
         kLfo_1 chnget "LFO_OUT_1"
         kLfo_2 chnget "LFO_OUT_2"
         ;######## GENERATOR #########
-        chnset kPitch - 12, "GEN_NOTE_1"
-        chnset kPitch - (kVolume * kLfo_1) * 0.2, "GEN_NOTE_2"
-        chnset kPitch + 7 + (kVolume * kLfo_1) * 0.2 , "GEN_NOTE_3"
-        chnset kPitch , "GEN_NOTE_4"
-        chnset kPitch + 7 + (kVolume * kLfo_1) * 0.2 , "GEN_NOTE_6"
-        chnset kPitch + 12 - (kVolume * kLfo_1) * 0.2, "GEN_NOTE_5"
+        chnset kPitch + kG1_Tran, "GEN_NOTE_1"
+        chnset kPitch + kG2_Tran, "GEN_NOTE_2"
+        chnset kPitch + kG3_Tran, "GEN_NOTE_3"
+        chnset kPitch + kG4_Tran, "GEN_NOTE_4"
+        chnset kPitch + kG5_Tran, "GEN_NOTE_6"
+        chnset kPitch + kG6_Tran, "GEN_NOTE_5"
 
-        asig chnget "GEN_OUTPUT_1"
+        asig1 chnget "GEN_OUTPUT_1"
         asig2 chnget "GEN_OUTPUT_2"
         asig3 chnget "GEN_OUTPUT_3"
         asig4 chnget "GEN_OUTPUT_4"
         asig5 chnget "GEN_OUTPUT_5"
         asig6 chnget "GEN_OUTPUT_6"
 
+        asig1 = asig1 * kG1_Mix
+        asig2 = asig2 * kG2_Mix
+        asig3 = asig3 * kG3_Mix
+        asig4 = asig4 * kG4_Mix
+        asig5 = asig5 * kG5_Mix
+        asig6 = asig6 * kG6_Mix
+
 
         ;########## FILTER PARAMETERS #############
         kFEnv chnget "ENV_2" ; => as filter env
-        chnset kFEnv*60 + (kVel * 10) + kLfo_1 * 10 + (kModWheel * 30) - 20, "FILTER_FREQ_1"
-        chnset kFEnv*50 + (kVel * 10) + kLfo_1 * 15 + (kModWheel * 30) - 20, "FILTER_FREQ_2"
+        chnset kF1_F + kFEnv*kF1_p_track + (kVel * kF1_v_track) + (kModWheel * kF1_mod) , "FILTER_FREQ_1"
+        chnset kF2_F + kFEnv*kF2_p_track + (kVel * kF2_v_track) + (kModWheel * kF2_mod) , "FILTER_FREQ_2"
         chnset kFEnv-0.3, "FILTER_RES_1"
         chnset kFEnv-0.2, "FILTER_RES_2"
 
@@ -88,8 +143,8 @@
         iBase = 0.2
         kAmpEnv chnget "ENV_1"
         kAmpEnv = kAmpEnv * (iBase + (1-iBase) * kVel)
+        asumR = (asig1*0.7 + asig2*1.5 + asig3) * kAmpEnv
         asumL = (asig4 + asig5 + asig6) * kAmpEnv 
-        asumR = (asig*0.7 + asig2*1.5 + asig3) * kAmpEnv
 
         ;######## PASS AUDIO THROUTH FILTERS ###########
         chnset asumL, "FILTER_INPUT_1"
@@ -102,12 +157,8 @@
 
         kDiff = kVolume * (kLfo_2 - 0.5)
 
-        SChanName sprintfk "%s_%d_%d_%d", "OSC_DATA", p1, p4, 1
-        kExternal init 1; chnget SChanName
-        printks "ROU -> SChanName %s\n", 0, SChanName
-        printks "ROU -> kExternal %f\n", 0, kExternal
-        chnset kExternal * 0.08*(1 + kDiff) * asigLeft, "MASTER_INPUT_L_01"
-        chnset kExternal * 0.08*(1 - kDiff) * asigRight, "MASTER_INPUT_R_01"
+        chnset 0.1 * asigLeft, "MASTER_INPUT_L_01"
+        chnset 0.1 * asigRight, "MASTER_INPUT_R_01"
     endin
 
 
@@ -118,10 +169,10 @@
         ain2 init 0.2
         ain1 chnget "MASTER_INPUT_L_01"
         ain2 chnget "MASTER_INPUT_R_01"
-        kroomsize init 0.95 ; room size (range 0 to 1)
-        kHFDamp init 0.2 ; high freq. damping (range 0 to 1)
+        kroomsize init 0.95 
+        kHFDamp init 0.2 
         aRvbL,aRvbR freeverb ain1, ain2,kroomsize,kHFDamp
-        outs aRvbL, aRvbR ; send audio to outputs
+        outs aRvbL, aRvbR
     endin
     
     instr 5 ; ########### LFO MODULATOR #############
@@ -164,7 +215,9 @@
         chnset asig, SOutputName
     endin 
 
-    ;################ MIDI DETECTOR #################
+
+
+    ;################ REAL TIME MIDI DETECTOR #################
     instr 1	
         inum    notnum
         knum init inum
@@ -181,9 +234,28 @@
 
         kPressed = 1
         chnset kPressed, "KEY_PRESSED"
-        kThisTrig init 1
-        kThisTrig = 0
     endin
+
+
+    ; ############## INTERNAL PRESS ###############
+    instr 27
+        inum init p5
+        knum init inum
+        chnset knum, "MIDI_NOTE_01"
+        iVel    veloc    ;
+        kVel = iVel
+        chnset kVel/127, "MIDI_VELOCITY_01" ; SCALED
+
+        kRetrigg init 1
+        chnset kRetrigg, "MIDI_RETRIGGER_01"
+        if kRetrigg == 1 then
+            kRetrigg = 0
+        endif
+
+        kPressed = 1
+        chnset kPressed, "KEY_PRESSED"
+    endin
+
 
 
     ;############# PORTAMENTO ################
@@ -332,6 +404,8 @@
 ;########### INSTRUMENT EVENTS ############
 ;##########################################
 ; instrNo   start  dur.  
+    i3      0.01   7200  ; INITIAL INSTR
+
     i5      0.01   7200  1   5; LFO1
     i5      0.01   7200  2   0.5; LFO2
 
