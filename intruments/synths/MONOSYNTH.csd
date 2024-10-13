@@ -320,20 +320,22 @@ nchnls = 2; STEREO XD
     i20     0.01   7200  1        ; FILTER 01
     i20     0.01   7200  2        ; FILTER 02
     i39     0.01   7200  1        ; ROUTING INSTR
+
     i19     0.02   7200  1        ; GEN 1
     i19     0.02   7200  2        ; GEN 2
     i19     0.02   7200  3        ; GEN 3
     i19     0.02   7200  4        ; GEN 4
     i19     0.02   7200  5        ; GEN 5
     i19     0.02   7200  6        ; GEN 6
-    i1000   0.00   7200
 
-    ;ENVELOPE INSTR
+    i1000   0.00   7200           ; KEYPRESS SET TO ZERO
+
+
     ;----------------p4   p5  p6    p7-  p8
     ;----------------A    D   S     R--- CHAN
     i21 0.01   7200  2    2   0.2   4    1   ;AMP ENVELOPE
     i21 0.01   7200  0.5  2   0.6   4    2   ;FLT ENVELOPE
-    ;i21 0.01   7200  1   2   3     4     2
+
 e
 </CsScore>
 </CsoundSynthesizer>
