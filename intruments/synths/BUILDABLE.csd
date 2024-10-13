@@ -75,12 +75,7 @@
         kEnvNo        init 1
         kGotData OSClisten gihandle, "/mono/createrouting", "ff", kInstanceNo, kMidiChan
         if kGotData == 1 then
-
             event "i", 39,  0,  3600*4, kInstanceNo, kMidiChan
-            event "i",  8,  0,  3600*4, kInstanceNo, kMidiChan
-            ;i21 0.01           7200    2    2   0.2   4    1   ;AMP ENVELOPE
-            event "i", 21,  0,  3600*4, 1,   2,  0.3,  4,   1
-            event "i", 21,  0,  3600*4, 1,   2,  0.3,  4,   2
             kRoutingCount = kRoutingCount + 1
             kEnvNo = kEnvNo + 1
         endif
@@ -100,9 +95,31 @@
 
     ;############## ROUTING INSTR ################
     instr 39
-        iRoutingNo  init p1
         iInstanceNo init p4
         iMidiChan init p5
+        ktrig init 1
+        if ktrig == 1 then
+            event "i",  8,  0,  3600*4, iInstanceNo, iMidiChan
+            event "i", 21,  0,  3600*4, 1,   2,  0.3,  4,   1
+            event "i", 21,  0,  3600*4, 1,   2,  0.3,  4,   2
+
+            event "i",19,  0.02, 7200, 1          ; GEN 1
+            event "i",19,  0.02, 7200, 2          ; GEN 2
+            event "i",19,  0.02, 7200, 3          ; GEN 3
+            event "i",19,  0.02, 7200, 4          ; GEN 4
+            event "i",19,  0.02, 7200, 5          ; GEN 5
+            event "i",19,  0.02, 7200, 6          ; GEN 6
+
+            event "i",20,  0.01, 7200, 1          ; FILTER 01
+            event "i",20,  0.01, 7200, 2          ; FILTER 02   
+            
+            event "i", 5,  0.01, 7200, 1, 5;   LFO1
+            event "i", 5,  0.01, 7200, 2, 0.5; LFO2    
+
+            ktrig = 0
+        endif
+        
+        iRoutingNo  init p1
         kTranspose  init 0
         kPortamento init 0
         kAllowRetr  init 0
@@ -427,24 +444,10 @@
     i3      0.01   7200  ; INITIAL INSTR
 ;                          instance
 ;                            no.
-    i5      0.01   7200       1       5; LFO1
-    i5      0.01   7200       2       0.5; LFO2
-     
 
-    i99999  0.01   7200       1          ; MASTER
-    i99077  0.01   7200       1          ; UDP OSC LISTENER
-    i20     0.01   7200       1          ; FILTER 01
-    i20     0.01   7200       2          ; FILTER 02
-
-    
-    i19     0.02   7200       1          ; GEN 1
-    i19     0.02   7200       2          ; GEN 2
-    i19     0.02   7200       3          ; GEN 3
-    i19     0.02   7200       4          ; GEN 4
-    i19     0.02   7200       5          ; GEN 5
-    i19     0.02   7200       6          ; GEN 6
-
-    i1000   0.00   7200           ; KEYPRESS SET TO ZERO
+    i99999  0.01   7200                  ; MASTER
+    i99077  0.01   7200                  ; UDP OSC LISTENER
+    i1000   0.00   7200                  ; KEYPRESS SET TO ZERO
 
 e
 </CsScore>
