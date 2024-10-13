@@ -344,10 +344,10 @@
     i1000   0.00   7200           ; KEYPRESS SET TO ZERO
 
 
-    ;----------------p4   p5  p6    p7-  p8
-    ;----------------A    D   S     R--- CHAN
-    i21 0.01   7200  2    2   0.2   4    1   ;AMP ENVELOPE
-    i21 0.01   7200  0.5  2   0.6   4    2   ;FLT ENVELOPE
+    ;p1  p2     p3     p4   p5  p6    p7-  p8
+    ;              ;;  A    D   S     R--- CHAN
+    i21 0.01   7200    2    2   0.2   4    1   ;AMP ENVELOPE
+    i21 0.01   7200    0.5  2   0.6   4    2   ;FLT ENVELOPE
 
 e
 </CsScore>
