@@ -31,10 +31,11 @@ outVolParNo = 1
 r = Routing(1, 1)
 
 client.send_message("/mono/createrouting", r.toList())
-
+time.sleep(4)
+client.send_message("/mono/setgenmix", [1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
     
-while True:
-    client.send_message("/monosynth", [routingInstr, instanceNo, outVolParNo, 0])
-    time.sleep(1)
-    client.send_message("/monosynth", [routingInstr, instanceNo, outVolParNo, 1])
-    time.sleep(1)
+# while True:
+#     client.send_message("/monosynth", [routingInstr, instanceNo, outVolParNo, 0])
+#     time.sleep(1)
+#     client.send_message("/monosynth", [routingInstr, instanceNo, outVolParNo, 1])
+#     time.sleep(1)

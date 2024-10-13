@@ -100,25 +100,25 @@
         ktrig init 1
         if ktrig == 1 then
             event "i",  8,  0,  3600*4, iInstanceNo, iMidiChan
-            event "i", 21,  0,  3600*4, 1,   2,  0.3,  4,   1
-            event "i", 21,  0,  3600*4, 1,   2,  0.3,  4,   2
+            event "i", 21,  0,  3600*4, 1,   2,  0.3,  4,   1  ;ENV 1
+            event "i", 21,  0,  3600*4, 1,   2,  0.3,  4,   2  ;ENV 2
 
-            event "i",19,  0.02, 7200, 1          ; GEN 1
-            event "i",19,  0.02, 7200, 2          ; GEN 2
-            event "i",19,  0.02, 7200, 3          ; GEN 3
-            event "i",19,  0.02, 7200, 4          ; GEN 4
-            event "i",19,  0.02, 7200, 5          ; GEN 5
-            event "i",19,  0.02, 7200, 6          ; GEN 6
+            event "i",19,  0.02, 7200, iInstanceNo, 1          ; GEN 1
+            event "i",19,  0.02, 7200, iInstanceNo, 2          ; GEN 2
+            event "i",19,  0.02, 7200, iInstanceNo, 3          ; GEN 3
+            event "i",19,  0.02, 7200, iInstanceNo, 4          ; GEN 4
+            event "i",19,  0.02, 7200, iInstanceNo, 5          ; GEN 5
+            event "i",19,  0.02, 7200, iInstanceNo, 6          ; GEN 6
 
             event "i",20,  0.01, 7200, 1          ; FILTER 01
             event "i",20,  0.01, 7200, 2          ; FILTER 02   
-            
+
             event "i", 5,  0.01, 7200, 1, 5;   LFO1
             event "i", 5,  0.01, 7200, 2, 0.5; LFO2    
 
             ktrig = 0
         endif
-        
+
         iRoutingNo  init p1
         kTranspose  init 0
         kPortamento init 0
@@ -152,11 +152,60 @@
         kF1_v_track  init 12
         kF1_mod      init 30
 
-        kF2_F      init 21
-        kF2_Q      init 0.3
+        kF2_F        init 21
+        kF2_Q        init 0.3
         kF2_p_track  init 12
         kF2_v_track  init 12
         kF2_mod      init 30
+
+        SChanName sprintfk "%s_%d", "PORTAMENTO_OUT", iMidiChan
+
+        kval1 init 1
+        kval2 init 1
+        kval3 init 1
+        kval4 init 1
+        kval5 init 1
+        kval6 init 1
+        ktestInstanceNo init 0
+
+        kGotData OSClisten gihandle, "/mono/setgenmix", "fffffff", ktestInstanceNo, kval1, kval2, kval3, kval4, kval5, kval6
+        if kGotData == 1 && ktestInstanceNo == iInstanceNo then
+            kG1_Mix = kval1
+            kG2_Mix = kval2
+            kG3_Mix = kval3
+            kG4_Mix = kval4
+            kG5_Mix = kval5
+            kG6_Mix = kval6
+        endif
+
+        kGotData OSClisten gihandle, "/mono/setgentype", "fffffff", ktestInstanceNo, kval1, kval2, kval3, kval4, kval5, kval6
+        if kGotData == 1 && ktestInstanceNo == iInstanceNo then
+            kG1_Type = kval1
+            kG2_Type = kval2
+            kG3_Type = kval3
+            kG4_Type = kval4
+            kG5_Type = kval5
+            kG6_Type = kval6
+        endif
+        
+        kGotData OSClisten gihandle, "/mono/setgentransp", "fffffff", ktestInstanceNo, kval1, kval2, kval3, kval4, kval5, kval6
+        if kGotData == 1 && ktestInstanceNo == iInstanceNo then
+            kG1_Tran = kval1
+            kG2_Tran = kval2
+            kG3_Tran = kval3
+            kG4_Tran = kval4
+            kG5_Tran = kval5
+            kG6_Tran = kval6
+        endif
+        
+        kGotData OSClisten gihandle, "/mono/setfilter", "ffffff", ktestInstanceNo, kval1, kval2, kval3, kval4, kval5
+        if kGotData == 1 && ktestInstanceNo == iInstanceNo then
+            kF1_F        = kval1
+            kF1_Q        = kval2
+            kF1_p_track  = kval3
+            kF1_v_track  = kval4
+            kF1_mod      = kval5
+        endif
 
         SChanName sprintfk "%s_%d", "PORTAMENTO_OUT", iMidiChan
         kPitch chnget SChanName
@@ -184,6 +233,8 @@
         kLfo_1 chnget "LFO_OUT_1"
         kLfo_2 chnget "LFO_OUT_2"
         ;######## GENERATOR #########
+
+
         chnset kPitch + kG1_Tran, "GEN_NOTE_1"
         chnset kPitch + kG2_Tran, "GEN_NOTE_2"
         chnset kPitch + kG3_Tran, "GEN_NOTE_3"
@@ -197,6 +248,7 @@
         asig4 chnget "GEN_OUTPUT_4"
         asig5 chnget "GEN_OUTPUT_5"
         asig6 chnget "GEN_OUTPUT_6"
+   
 
         asig1 = asig1 * kG1_Mix
         asig2 = asig2 * kG2_Mix
@@ -204,7 +256,7 @@
         asig4 = asig4 * kG4_Mix
         asig5 = asig5 * kG5_Mix
         asig6 = asig6 * kG6_Mix
-
+        
 
         ;########## FILTER PARAMETERS #############
         kFEnv chnget "ENV_2" ; => as filter env
@@ -219,6 +271,9 @@
         kAmpEnv = kAmpEnv * (iBase + (1-iBase) * kVel)
         asumR = (asig1*0.7 + asig2*1.5 + asig3) * kAmpEnv
         asumL = (asig4 + asig5 + asig6) * kAmpEnv 
+
+
+
 
         ;######## PASS AUDIO THROUTH FILTERS ###########
         chnset asumL, "FILTER_INPUT_1"
@@ -262,7 +317,8 @@
     
     ;################# GENERATOR ###################
     instr 19 
-        iFilterNo init  p4 ;A
+        iInstanceNo init p4
+        iFilterNo init  p5 ;A
         SInputName sprintf "%s%d", "GEN_NOTE_", iFilterNo
         kCV chnget SInputName
         kCV = max(kCV, 1)
@@ -298,7 +354,7 @@
         iDec_1 init  p5 ;D
         iSus_1 init  p6 ;S
         iRel_1 init  p7 ;R
-        iChan_1 init p8 ;Ch
+        iInstanceNo init p8 ;Ch
         iMidiChan init 1
         kTime times
         kSavedEnv_1 init 0
@@ -309,7 +365,7 @@
         SChanName sprintfk "%s_%d", "KEY_PRESSED", iMidiChan
         kAnyPressed chnget SChanName
 
-        SRetriggerName sprintf "%s_%d", "ENV_RETRIGGER", iChan_1
+        SRetriggerName sprintf "%s_%d", "ENV_RETRIGGER", iInstanceNo
         kRetrigg chnget SRetriggerName
 
         kPrevPressed init 0
@@ -398,7 +454,7 @@
             kEnv_1 = max(kRelPhase, 0)
         endif
 
-        SResult_1 sprintf "%s%d", "ENV_", iChan_1
+        SResult_1 sprintf "%s%d", "ENV_", iInstanceNo
         chnset kEnv_1, SResult_1
 
         kPrevState_1 = kState_1
@@ -410,7 +466,7 @@
 
     instr 1000 ; REMOVE KEYPRESS 
         kPress = 0
-        chnset kPress, "KEY_PRESSED"
+        chnset kPress, "KEY_PRESSED"  
         chnset kPress, "KEY_PRESSED_1"
         chnset kPress, "KEY_PRESSED_2"
         chnset kPress, "KEY_PRESSED_3"
