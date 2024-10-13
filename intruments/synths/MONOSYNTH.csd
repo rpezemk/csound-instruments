@@ -4,19 +4,24 @@
 ;-iadc    ;;;uncomment -iadc if realtime audio input is needed too
 </CsOptions>
 <CsInstruments>
+    ;############# PERFORMANCE VALUES ################
+    sr = 44100
+    ksmps = 44
+    nchnls = 2; STEREO XD
+    0dbfs  = 1
 
-sr = 44100
-ksmps = 44
-nchnls = 2; STEREO XD
-0dbfs  = 1
+    ;############### STATIC VALUES ##################
+    #define Square #1#
+    #define Pulse  #2#
+    #define Triangle  #3#
 
-;############### STATIC VALUES ##################
-#define Square #1#
-#define Pulse  #2#
-#define Triangle  #3#
+    ;############### UPD PORT ###############
     gihandle OSCinit 37707
 
-    instr 99077 ; OSC RECEIVER 
+
+
+    ; ################ OSC RECEIVER #################
+    instr 99077 
         kDestInstrNo init 0
         kInstanceNo init 0
         kParamNo init 0
@@ -30,7 +35,9 @@ nchnls = 2; STEREO XD
         endif
     endin
 
-    instr 39 ; ##### ROUTING INSTR ################
+
+    ;############## ROUTING INSTR ################
+    instr 39 
         kPitch chnget "PORTAMENTO_OUT_01"
         kVel chnget "MIDI_VELOCITY_01"
         kstatus, kchan, kdata1, kdata2 midiin;
@@ -102,8 +109,8 @@ nchnls = 2; STEREO XD
 
 
 
-
-    instr 99999 ; ######### MASTER EFFECTS && OUTPUT ##########
+    ; ######### MASTER EFFECTS && OUTPUT ##########
+    instr 99999 
         ain1 init 0.2
         ain2 init 0.2
         ain1 chnget "MASTER_INPUT_L_01"
@@ -125,7 +132,8 @@ nchnls = 2; STEREO XD
         chnset klfo_shifted, SOutputName
     endin
     
-    instr 19 ;################# GENERATOR ###################
+    ;################# GENERATOR ###################
+    instr 19 
         iFilterNo init  p4 ;A
         SInputName sprintf "%s%d", "GEN_NOTE_", iFilterNo
         kCV chnget SInputName
@@ -135,7 +143,8 @@ nchnls = 2; STEREO XD
         chnset asig, SOutputName
     endin
 
-    instr 20 ;############## FILTER ################
+    ;############## FILTER ################
+    instr 20 
         iFilterNo init  p4 ;A
         SInputName sprintf "%s%d", "FILTER_INPUT_", iFilterNo
         SOutputName sprintf "%s%d", "FILTER_OUT_", iFilterNo
@@ -152,7 +161,8 @@ nchnls = 2; STEREO XD
         chnset asig, SOutputName
     endin 
 
-    instr 1	;################ MIDI DETECTOR #################
+    ;################ MIDI DETECTOR #################
+    instr 1	
         inum    notnum
         knum init inum
         chnset knum, "MIDI_NOTE_01"
@@ -172,7 +182,9 @@ nchnls = 2; STEREO XD
         kThisTrig = 0
     endin
 
-    instr 8 ;############# PORTAMENTO ################
+
+    ;############# PORTAMENTO ################
+    instr 8 
         kCurr init 5
         kPrevNote init 5
         kNote init 5
@@ -184,7 +196,8 @@ nchnls = 2; STEREO XD
     endin
 
 
-    instr 21 ;############## ENVELOPE INSTR ##############
+    ;############## ENVELOPE INSTR ##############
+    instr 21 
         iAtt_01 init  p4 ;A
         iDec_01 init  p5 ;D
         iSus_01 init  p6 ;S
