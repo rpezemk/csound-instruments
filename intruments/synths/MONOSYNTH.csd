@@ -20,6 +20,9 @@
 
 
 
+
+
+
     ; ################ OSC RECEIVER #################
     instr 99077 
         kDestInstrNo init 0
@@ -100,7 +103,7 @@
         kDiff = kVolume * (kLfo_2 - 0.5)
 
         SChanName sprintfk "%s_%d_%d_%d", "OSC_DATA", p1, p4, 1
-        kExternal chnget SChanName
+        kExternal init 1; chnget SChanName
         printks "ROU -> SChanName %s\n", 0, SChanName
         printks "ROU -> kExternal %f\n", 0, kExternal
         chnset kExternal * 0.08*(1 + kDiff) * asigLeft, "MASTER_INPUT_L_01"
@@ -322,7 +325,12 @@
     ; TABLES
     f 1 0 65536 10 1
     f 2 0 4096 10 1	
-    f0 30000
+    f 0 30000
+
+
+;##########################################
+;########### INSTRUMENT EVENTS ############
+;##########################################
 ; instrNo   start  dur.  
     i5      0.01   7200  1   5; LFO1
     i5      0.01   7200  2   0.5; LFO2
