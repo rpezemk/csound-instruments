@@ -1,2 +1,2 @@
-for i in range(1, 20):
-    print(f'p{i}')
+for i in range(1, 26):
+    print(f'{i}')

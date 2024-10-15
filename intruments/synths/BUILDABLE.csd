@@ -64,7 +64,7 @@
         SChanName sprintfk "%s_%d", "PORTAMENTO_OUT", iMidiChan
         chnset kRes, SChanName
     endin
-    
+
 
     ; ################ OSC RECEIVER -- ROUTING CREATOR #################
     instr 99077 
