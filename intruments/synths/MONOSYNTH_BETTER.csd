@@ -17,19 +17,10 @@
 
     ;############### UPD PORT ###############
     gihandle OSCinit 37707
-
-    ;################# GENERATOR ###################
-    instr 19 
-        iInstanceNo init p4
-        SInputName sprintf "%s_%d_%d", "INPUT", iInstanceNo, 1
-        kCV chnget SInputName
-        printks "kCV %f\n", 0, kCV
-        kCV = max(kCV, 1)
-        asig vco 0.3, cpsmidinn(kCV),  $Square,     0.5
-        SOutputName sprintf "%s_%d_%d", "OUTPUT", iInstanceNo, 1
-        chnset asig, SOutputName
-        outs asig * 0.01, asig * 0.01
-    endin
+    gkPitch_01 init 40
+    gkVel_01 init 0
+    gkRet_01 init 0
+    gkTrig_01 init 0
 
     ;################ REAL TIME MIDI DETECTOR #################
     instr 1	
@@ -38,7 +29,7 @@
         knum init inum
 
         SChanName sprintfk "%s_%d_%d", "OUTPUT", 1, 1
-
+        gkPitch_01 = knum
         chnset knum, SChanName        
 
         iVel    veloc    ;
@@ -46,18 +37,14 @@
 
         SChanName sprintfk "%s_%d_%d", "OUTPUT", 1, 2
         chnset kVel/127, SChanName ; SCALED
+        gkVel_01 = kVel
 
-        kRetrigg init 1
-        SChanName sprintfk "%s_%d_%d", "OUTPUT", 1, 3
-        chnset kRetrigg, SChanName
-
-        if kRetrigg == 1 then
-            kRetrigg = 0
+        gkRet_01 = 1
+        if gkRet_01 == 1 then
+            gkRet_01 = 0
         endif
 
-        kPressed = 1
-        SChanName sprintfk "%s_%d_%d", "OUTPUT", 1, 4
-        chnset kPressed, SChanName
+        gkTrig_01 = 1
     endin
 
     ; ################ K-RATE CABLE INSTRUMENT ###################
@@ -70,8 +57,8 @@
 
         SChanName sprintfk "%s_%d_%d", "OUTPUT", iSrcNo, iSrcOutNo
         kValue chnget SChanName
-        printks "SChanName %s\n", 0, SChanName
-        printks "knum %f\n", 0, kValue
+        ; printks "SChanName %s\n", 0, SChanName
+        ; printks "knum %f\n", 0, kValue
         SChanName sprintfk "%s_%d_%d", "INPUT", iDestNo, iDestOutNo
         chnset kValue, SChanName
     endin
@@ -81,45 +68,32 @@
 
     ;############## ENVELOPE INSTR ##############
     instr 21 
-        iChan   init  p4  ;Ch
-        iA
-        iAtt_01 init  p5  ;A
-        iDec_01 init  p7  ;D
-        iSus_01 init  p9  ;S
-        iRel_01 init  p11 ;R
-        iAtt_02 init  p6  ;A
-        iDec_02 init  p8  ;D
-        iSus_02 init  p10 ;S
-        iRel_02 init  p12 ;R
-p4
-p5
-p6
-p7
-p8
-p9
-p10
-p11
-p12
-p13
-p14
-p15
-p16
-p17
-p18
-p19
+        iChan   init  p4 ;Ch
+
+        kAtt_01 init  p5  ; A1
+        kDec_01 init  p6  ; D1
+        kSus_01 init  p7  ; S1
+        kRel_01 init  p8  ; R1
+
+        kAtt_02 init  p9  ; A2
+        kDec_02 init  p10 ; D2
+        kSus_02 init  p11 ; S2
+        kRel_02 init  p12 ; R2
+
+        kReson  init  p13
+
+
 
         kTime times
         kSavedEnv_01 init 0
-        kEnv_01 init 0
-        kEnv_02 init 0
+        kAmpEnv init 0
+        kFilterEnv init 0
         kAttTimer_01 init 0
         kDecTimer_01 init 0
         kRelTimer_01 init 0
 
-        kAnyPressed chnget "KEY_PRESSED"
-
-        SRetriggerName sprintf "%s%d", "ENV_RETRIGGER_", iChan
-        kRetrigg chnget SRetriggerName
+        kAnyPressed = gkTrig_01
+        kRetrigg = gkRet_01
 
         kPrevPressed init 0
 
@@ -206,21 +180,21 @@ p19
             kState_02 = 1
         endif
 
-        if kState_01 == 1 && kAttTimer_01 >= iAtt_01 then
+        if kState_01 == 1 && kAttTimer_01 >= kAtt_01 then
             kDecSnap_01 = kTime
             kState_01 = 2
         endif
 
-        if kState_02 == 1 && kAttTimer_02 >= iAtt_02 then
+        if kState_02 == 1 && kAttTimer_02 >= kAtt_02 then
             kDecSnap_02 = kTime
             kState_02 = 2
         endif
 
-        if kState_01 == 2 && kAttTimer_01 > iAtt_01 + iDec_01 then
+        if kState_01 == 2 && kAttTimer_01 > kAtt_01 + kDec_01 then
             kState_01 = 3
         endif
 
-        if kState_02 == 2 && kAttTimer_02 > iAtt_02 + iDec_02 then
+        if kState_02 == 2 && kAttTimer_02 > kAtt_02 + kDec_02 then
             kState_02 = 3
         endif
 
@@ -234,50 +208,57 @@ p19
             kState_02 = 4
         endif
 
-        if kRelTimer_01 > iRel_01 then
+        if kRelTimer_01 > kRel_01 then
             kState_01 = 0
         endif
 
-        if kRelTimer_02 > iRel_02 then
+        if kRelTimer_02 > kRel_02 then
             kState_02 = 0
         endif
 
         if kState_01 == 4 then
             if kPrevState_01 == 1 || kPrevState_01 == 2 || kPrevState_01 == 3 then
-                kSavedEnv_01 = kEnv_01
+                kSavedEnv_01 = kAmpEnv
             endif
         endif
 
         if kState_02 == 4 then
             if kPrevState_02 == 1 || kPrevState_02 == 2 || kPrevState_02 == 3 then
-                kSavedEnv_02 = kEnv_02
+                kSavedEnv_02 = kFilterEnv
             endif
         endif
 
         if kState_01 == 1 then
-            kEnv_01 = kAttTimer_01 / iAtt_01
+            kAmpEnv = kAttTimer_01 / kAtt_01
         elseif kState_01 == 2 then
-            kEnv_01 = iSus_01 +  (1 - iSus_01) * (iDec_01 - kDecTimer_01)/iDec_01 
+            kAmpEnv = kSus_01 +  (1 - kSus_01) * (kDec_01 - kDecTimer_01)/kDec_01 
         elseif kState_01 == 3 then
-            kEnv_01 = iSus_01
+            kAmpEnv = kSus_01
         elseif kState_01 == 4 then
-            kRelPhase = (iRel_01 - kRelTimer_01)/iRel_01  + (kSavedEnv_01 - 1)
-            kEnv_01 = max(kRelPhase, 0)
+            kRelPhase = (kRel_01 - kRelTimer_01)/kRel_01  + (kSavedEnv_01 - 1)
+            kAmpEnv = max(kRelPhase, 0)
         endif
 
         if kState_02 == 1 then
-            kEnv_02 = kAttTimer_02 / iAtt_02
+            kFilterEnv = kAttTimer_02 / kAtt_02
         elseif kState_02 == 2 then
-            kEnv_02 = iSus_02 +  (1 - iSus_02) * (iDec_02 - kDecTimer_02)/iDec_02 
+            kFilterEnv = kSus_02 +  (1 - kSus_02) * (kDec_02 - kDecTimer_02)/kDec_02 
         elseif kState_02 == 3 then
-            kEnv_02 = iSus_02
+            kFilterEnv = kSus_02
         elseif kState_02 == 4 then
-            kRelPhase = (iRel_02 - kRelTimer_02)/iRel_02  + (kSavedEnv_02 - 1)
-            kEnv_02 = max(kRelPhase, 0)
+            kRelPhase = (kRel_02 - kRelTimer_02)/kRel_02  + (kSavedEnv_02 - 1)
+            kFilterEnv = max(kRelPhase, 0)
         endif
 
-        chnset kEnv_01, "ENV_1"
-        chnset kEnv_02, "ENV_2"
+        printks "kAmpEnv => %f\n", 0.1, kAmpEnv
+        printks "kFilterEnv => %f\n", 0.1, kFilterEnv
+        asig vco 0.3, cpsmidinn(gkPitch_01),  $Square,     0.5
+
+        kResFilterVal = kFilterEnv * 12 + gkPitch_01
+        kFilterFreq = cpsmidinn(kResFilterVal)
+        asig = asig * kAmpEnv
+        asig moogvcf asig, kFilterFreq, kReson
+        outs asig * 0.1, asig * 0.1
 
         kPrevState_01 = kState_01
         kPrevState_02 = kState_02
@@ -291,6 +272,7 @@ p19
 
     instr 1000 ; REMOVE KEYPRESS 
         kPress = 0
+        gkTrig_01 = 0
         chnset kPress, "KEY_PRESSED"  
         chnset kPress, "KEY_PRESSED_1"
         chnset kPress, "KEY_PRESSED_2"
@@ -327,6 +309,10 @@ p19
    ;i1  ; MIDI-key
     i777    0.01   7200                1        1      0      101    1 
     i19     0.01   7200      101     
+
+                                   ; a d s   r    a d  s  r   q
+    i21     0.01   7200      1       1 2 0.3 2    1 2 0.3 2   0.5
+
     i1000   0.00   7200                         ; KEYPRESS SET TO ZERO
 
 e
