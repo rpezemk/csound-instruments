@@ -39,3 +39,6 @@ client.send_message("/mono/setgenmix", [1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 #     time.sleep(1)
 #     client.send_message("/monosynth", [routingInstr, instanceNo, outVolParNo, 1])
 #     time.sleep(1)
+
+
+
